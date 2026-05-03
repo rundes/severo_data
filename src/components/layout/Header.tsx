@@ -1,14 +1,11 @@
 "use client"
 
-import { signOut } from "next-auth/react"
+import { useAuth } from "@/contexts/AuthContext"
 import Image from "next/image"
-import type { Session } from "next-auth"
 
-interface Props {
-  user: Session["user"]
-}
+export default function Header() {
+  const { user, signOut } = useAuth()
 
-export default function Header({ user }: Props) {
   return (
     <header className="bg-white border-b border-gray-100 px-6 py-3.5 flex items-center justify-between flex-shrink-0">
       <div className="md:ml-0 ml-10">
@@ -18,17 +15,18 @@ export default function Header({ user }: Props) {
 
       <div className="flex items-center gap-3">
         <span className="text-xs text-gray-400 hidden sm:block">{user?.email}</span>
-        {user?.image && (
+        {user?.picture && (
           <Image
-            src={user.image}
-            alt={user.name ?? "Avatar"}
+            src={user.picture}
+            alt={user.name}
             width={34}
             height={34}
             className="rounded-full ring-2 ring-gray-100"
+            unoptimized
           />
         )}
         <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={signOut}
           className="text-xs text-gray-400 hover:text-red-500 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
         >
           Salir

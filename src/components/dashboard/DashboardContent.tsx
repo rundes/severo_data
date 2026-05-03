@@ -1,6 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
+import { useAuth } from "@/contexts/AuthContext"
+import { fetchSheetData } from "@/lib/sheets"
 import { analyzeColumns, proposeCharts } from "@/lib/dataAnalysis"
 import type { ChartConfig } from "@/types"
 import ChartGrid from "@/components/charts/ChartGrid"
@@ -15,6 +17,7 @@ interface Props {
 }
 
 export default function DashboardContent({ sheetId, title, description }: Props) {
+  const { accessToken } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [charts, setCharts] = useState<ChartConfig[]>([])
@@ -22,16 +25,12 @@ export default function DashboardContent({ sheetId, title, description }: Props)
   const [rows, setRows] = useState<(string | number | null)[][]>([])
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  async function load() {
+  const load = useCallback(async () => {
+    if (!accessToken) return
     try {
       setLoading(true)
       setError(null)
-      const res = await fetch(`/api/sheets?sheetId=${encodeURIComponent(sheetId)}`)
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error ?? "Error al cargar datos")
-      }
-      const data = await res.json()
+      const data = await fetchSheetData(sheetId, "A:Z", accessToken)
       const cols = analyzeColumns(data.headers, data.rows)
       const proposed = proposeCharts(data.headers, data.rows, cols)
       setHeaders(data.headers)
@@ -43,16 +42,15 @@ export default function DashboardContent({ sheetId, title, description }: Props)
     } finally {
       setLoading(false)
     }
-  }
+  }, [sheetId, accessToken])
 
-  useEffect(() => { load() }, [sheetId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [load])
 
   if (loading) return <LoadingSpinner />
   if (error) return <ErrorState message={error} />
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">{title}</h1>
@@ -76,8 +74,7 @@ export default function DashboardContent({ sheetId, title, description }: Props)
 
       {charts.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 border border-gray-100 text-center text-gray-400 text-sm">
-          No se pudieron proponer gráficos automáticamente para esta hoja.
-          Los datos se muestran en la tabla a continuación.
+          No se pudieron proponer gráficos para esta hoja. Los datos se muestran en la tabla.
         </div>
       ) : (
         <ChartGrid charts={charts} />

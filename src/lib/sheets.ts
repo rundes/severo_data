@@ -10,12 +10,11 @@ export async function fetchSheetData(
   const url = `${SHEETS_BASE}/${spreadsheetId}/values/${encodeURIComponent(range)}`
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
-    next: { revalidate: 0 },
   })
 
   if (!res.ok) {
-    const err = await res.json()
-    throw new Error(err.error?.message ?? `HTTP ${res.status}`)
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error?.message ?? `Error HTTP ${res.status}`)
   }
 
   const data = await res.json()
@@ -27,7 +26,9 @@ export async function fetchSheetData(
     headers.map((_, i) => {
       const cell = row[i]
       if (cell === undefined || cell === "") return null
-      const num = Number(cell.replace(/\./g, "").replace(",", "."))
+      // Handle Argentine number format (1.234,56 → 1234.56)
+      const normalized = cell.replace(/\./g, "").replace(",", ".")
+      const num = Number(normalized)
       return isNaN(num) ? cell : num
     })
   )
@@ -42,12 +43,11 @@ export async function fetchSheetTabs(
   const url = `${SHEETS_BASE}/${spreadsheetId}?fields=sheets.properties`
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
-    next: { revalidate: 0 },
   })
 
   if (!res.ok) {
-    const err = await res.json()
-    throw new Error(err.error?.message ?? `HTTP ${res.status}`)
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error?.message ?? `Error HTTP ${res.status}`)
   }
 
   const data = await res.json()
