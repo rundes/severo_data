@@ -1,0 +1,12 @@
+node_modules/
+.next/
+src/
+out/
+.env*
+*.config.*
+tsconfig*
+tailwind*
+postcss*
+package*
+next-env*
+*.txt
