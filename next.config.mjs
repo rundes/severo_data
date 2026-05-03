@@ -1,10 +1,9 @@
-import type { NextConfig } from "next"
+// @ts-check
 
-// In GitHub Pages the app lives at /<repo-name>/.
-// Set NEXT_PUBLIC_BASE_PATH="" in .env.local for local dev.
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "/severo_data"
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   output: "export",
   trailingSlash: true,
   basePath,
