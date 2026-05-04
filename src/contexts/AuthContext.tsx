@@ -48,7 +48,7 @@ declare global {
   }
 }
 
-const STORAGE_KEY = "severo_auth_v1"
+const STORAGE_KEY = "severo_auth_v2"
 
 function readStorage(): { user: AuthUser; accessToken: string } | null {
   try {
@@ -152,13 +152,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(() => {
     setState((s) => ({ ...s, error: null }))
+    tokenClientRef.current = null
     loadGIS()
       .then(() => {
         if (!tokenClientRef.current) {
           tokenClientRef.current = window.google!.accounts.oauth2.initTokenClient({
             client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
             scope:
-              "openid email profile https://www.googleapis.com/auth/spreadsheets.readonly",
+              "openid email profile https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.readonly",
             callback: (res) => {
               if (res.error || !res.access_token) {
                 setState((s) => ({
