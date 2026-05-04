@@ -22,6 +22,13 @@ export interface ColumnInfo {
   count?: number
 }
 
+export interface DriveFile {
+  id: string
+  name: string
+  mimeType: string
+  modifiedTime?: string
+}
+
 export interface ChartConfig {
   type: "bar" | "line" | "pie" | "kpi"
   title: string

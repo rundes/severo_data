@@ -1,6 +1,7 @@
-import type { SheetData, SheetTab } from "@/types"
+import type { SheetData, SheetTab, DriveFile } from "@/types"
 
 const SHEETS_BASE = "https://sheets.googleapis.com/v4/spreadsheets"
+const DRIVE_BASE = "https://www.googleapis.com/drive/v3"
 
 export async function fetchSheetData(
   spreadsheetId: string,
@@ -57,4 +58,24 @@ export async function fetchSheetTabs(
       title: s.properties.title,
     })
   )
+}
+
+export async function fetchDriveFolder(
+  folderId: string,
+  accessToken: string
+): Promise<DriveFile[]> {
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`)
+  const fields = encodeURIComponent("files(id,name,mimeType,modifiedTime)")
+  const url = `${DRIVE_BASE}/files?q=${q}&fields=${fields}&pageSize=100&orderBy=name`
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error?.message ?? `Error Drive ${res.status}`)
+  }
+
+  const data = await res.json()
+  return (data.files ?? []) as DriveFile[]
 }
