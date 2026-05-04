@@ -184,4 +184,20 @@ export const COL = {
   tipoProblema: [/\btipo\b/i, /categor[ií]a/i, /problem[aá]/i, /reclamo/i],
   gravedad: [/gravedad/i, /severidad/i, /urgencia/i, /\bnivel\b/i, /prioridad/i],
   descripcion: [/descripci[oó]n/i, /detalle/i, /observaci[oó]n/i],
+
+  // Electoral
+  partido: [/\bpartido\b/i, /agrupaci[oó]n/i, /\blista\b/i, /\bfrente\b/i, /\bbloque\b/i, /\balianza\b/i, /fuerza.*pol/i],
+  votos: [/\bvotos?\b/i, /\bcantidad\b/i, /\btotal_votos\b/i, /\btotal\b/i, /\bsufragios?\b/i],
+  pctVotos: [/%.*votos?/i, /votos?.*%/i, /porcentaje/i, /\bpct\b/i, /\bpor.*ciento\b/i],
+  seccion: [/\bsecci[oó]n\b/i, /\bdistrito\b/i, /\bseccional\b/i],
+  circuitoElect: [/\bcircuito\b/i, /\bcirc\b/i, /\bcod.*circ\b/i],
+  mesaElect: [/\bmesa\b/i, /\borden\b/i],
+  cargo: [/\bcargo\b/i, /\bcategor[ií]a\b/i, /\beleccion\b/i, /\bpuesto\b/i],
+  candidato: [/candidato/i, /\bnombre\b/i, /\bapellido\b/i],
+  votosValidos: [/v[aá]lidos?/i, /positivos?/i],
+  votosBlancos: [/blancos?/i],
+  votosNulos: [/nulos?/i, /anulados?/i],
+  votosImpug: [/impugnados?/i, /recurridos?/i],
+  electores: [/\belectores\b/i, /\bhabilitados\b/i, /\bpadr[oó]n\b/i],
+  participacion: [/participaci[oó]n/i, /concurrencia/i, /\bvotaron\b/i],
 }
