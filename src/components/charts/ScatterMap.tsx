@@ -18,6 +18,7 @@ interface Props {
   subtitle?: string
   badge?: string
   colorMap?: Record<string, string>
+  mode?: "scatter" | "heat"
 }
 
 const DEFAULT_COLORS = ["#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"]
@@ -29,7 +30,76 @@ const VOTE_COLOR: Record<string, string> = {
   OTRO: "#94a3b8",
 }
 
-export default function ScatterMap({ data, title, subtitle, badge, colorMap }: Props) {
+// Bin points into a grid and return density per cell (0–1 normalized)
+function buildDensityGrid(points: Point[], cols = 60, rows = 60) {
+  if (!points.length) return { grid: [], minX: 0, maxX: 1, minY: 0, maxY: 1, cols, rows }
+  const xs = points.map(p => p.x)
+  const ys = points.map(p => p.y)
+  const minX = Math.min(...xs), maxX = Math.max(...xs)
+  const minY = Math.min(...ys), maxY = Math.max(...ys)
+  const dx = (maxX - minX) || 1
+  const dy = (maxY - minY) || 1
+  const grid: number[][] = Array.from({ length: rows }, () => new Array(cols).fill(0))
+  for (const p of points) {
+    const c = Math.min(cols - 1, Math.floor(((p.x - minX) / dx) * cols))
+    const r = Math.min(rows - 1, Math.floor(((p.y - minY) / dy) * rows))
+    grid[r][c]++
+  }
+  const maxVal = Math.max(...grid.flat()) || 1
+  const normalized = grid.map(row => row.map(v => v / maxVal))
+  return { grid: normalized, minX, maxX, minY, maxY, cols, rows }
+}
+
+function heatColor(t: number): string {
+  // blue → cyan → green → yellow → red
+  if (t < 0.25) {
+    const s = t / 0.25
+    return `rgba(14,165,233,${0.15 + s * 0.5})`
+  } else if (t < 0.5) {
+    const s = (t - 0.25) / 0.25
+    return `rgba(16,185,129,${0.5 + s * 0.2})`
+  } else if (t < 0.75) {
+    const s = (t - 0.5) / 0.25
+    return `rgba(245,158,11,${0.65 + s * 0.2})`
+  }
+  const s = (t - 0.75) / 0.25
+  return `rgba(239,68,68,${0.8 + s * 0.2})`
+}
+
+function HeatMapCanvas({ data, width, height }: { data: Point[]; width: number; height: number }) {
+  const COLS = 50; const ROWS = 50
+  const { grid, minX, maxX, minY, maxY } = buildDensityGrid(data, COLS, ROWS)
+  const dx = (maxX - minX) || 1
+  const dy = (maxY - minY) || 1
+  const cellW = width / COLS
+  const cellH = height / ROWS
+
+  return (
+    <svg width={width} height={height} style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}>
+      {grid.map((row, ri) =>
+        row.map((val, ci) => {
+          if (val < 0.01) return null
+          // map grid coords back to svg coords
+          const svgX = ((ci / COLS) * dx + minX - minX) / dx * width
+          const svgY = height - ((ri / ROWS) * dy + minY - minY) / dy * height - cellH
+          return (
+            <rect
+              key={`${ri}-${ci}`}
+              x={svgX}
+              y={svgY}
+              width={cellW + 1}
+              height={cellH + 1}
+              fill={heatColor(val)}
+              rx={1}
+            />
+          )
+        })
+      )}
+    </svg>
+  )
+}
+
+export default function ScatterMap({ data, title, subtitle, badge, colorMap, mode = "scatter" }: Props) {
   if (!data.length) return null
 
   const keys = [...new Set(data.map((d) => d.colorKey ?? "").filter(Boolean))]
@@ -48,14 +118,34 @@ export default function ScatterMap({ data, title, subtitle, badge, colorMap }: P
           {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
         </div>
         {badge && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex-shrink-0">
-            {badge}
-          </span>
+          <span className={`text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${
+            badge.startsWith("★") ? "bg-red-50 text-red-600" :
+            badge.startsWith("●") ? "bg-sky-50 text-sky-600" :
+            "bg-purple-50 text-purple-600"
+          }`}>{badge}</span>
         )}
       </div>
-      <p className="text-xs text-gray-300 mb-3">Visualización de coordenadas lat/lon — norte arriba</p>
+      <p className="text-xs text-gray-300 mb-3">
+        {mode === "heat"
+          ? "Mapa de calor — densidad de electores georreferenciados"
+          : "Visualización de coordenadas lat/lon — norte arriba"}
+      </p>
 
-      {keys.length > 1 && (
+      {mode === "heat" && (
+        <div className="flex items-center gap-1 mb-3">
+          <span className="text-[10px] text-gray-400 mr-1">Densidad:</span>
+          {["Baja", "Media", "Alta", "Máx."].map((l, i) => (
+            <div key={l} className="flex items-center gap-1">
+              <div className="w-4 h-3 rounded-sm" style={{
+                background: heatColor([0.1, 0.35, 0.65, 0.9][i])
+              }} />
+              <span className="text-[10px] text-gray-400">{l}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {mode === "scatter" && keys.length > 1 && (
         <div className="flex flex-wrap gap-3 mb-3">
           {keys.map((k) => (
             <div key={k} className="flex items-center gap-1.5">
@@ -66,38 +156,59 @@ export default function ScatterMap({ data, title, subtitle, badge, colorMap }: P
         </div>
       )}
 
-      <ResponsiveContainer width="100%" height={300}>
-        <ScatterChart margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-          <XAxis
-            dataKey="x"
-            type="number"
-            name="Longitud"
-            domain={["auto", "auto"]}
-            tick={{ fontSize: 9, fill: "#cbd5e1" }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            dataKey="y"
-            type="number"
-            name="Latitud"
-            domain={["auto", "auto"]}
-            tick={{ fontSize: 9, fill: "#cbd5e1" }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <Tooltip
-            cursor={{ strokeDasharray: "3 3" }}
-            contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: 11 }}
-            formatter={(_, name, props) => [props.payload.label ?? "", name]}
-          />
-          <Scatter data={data} opacity={0.6}>
-            {data.map((pt, i) => (
-              <Cell key={i} fill={getColor(pt.colorKey)} />
-            ))}
-          </Scatter>
-        </ScatterChart>
-      </ResponsiveContainer>
+      {mode === "heat" ? (
+        <div style={{ position: "relative", height: 320 }}>
+          <ResponsiveContainer width="100%" height={320}>
+            <ScatterChart margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+              <XAxis dataKey="x" type="number" domain={["auto", "auto"]}
+                tick={{ fontSize: 9, fill: "#cbd5e1" }} axisLine={false} tickLine={false} />
+              <YAxis dataKey="y" type="number" domain={["auto", "auto"]}
+                tick={{ fontSize: 9, fill: "#cbd5e1" }} axisLine={false} tickLine={false} />
+              <Tooltip
+                cursor={{ strokeDasharray: "3 3" }}
+                contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: 11 }}
+                formatter={(_, name, props) => [props.payload.label ?? "", name]}
+              />
+              {/* Invisible scatter just to set axis domain */}
+              <Scatter data={data} opacity={0}>
+                {data.map((_, i) => <Cell key={i} fill="transparent" />)}
+              </Scatter>
+            </ScatterChart>
+          </ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={320} style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}>
+            <ScatterChart margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+              <XAxis dataKey="x" type="number" domain={["auto", "auto"]} hide />
+              <YAxis dataKey="y" type="number" domain={["auto", "auto"]} hide />
+              <Scatter
+                data={data}
+                shape={(props: { cx?: number; cy?: number }) => {
+                  const { cx = 0, cy = 0 } = props
+                  return <circle cx={cx} cy={cy} r={5} fill="#1e3a5f" opacity={0.12} />
+                }}
+              />
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={300}>
+          <ScatterChart margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+            <XAxis dataKey="x" type="number" name="Longitud" domain={["auto", "auto"]}
+              tick={{ fontSize: 9, fill: "#cbd5e1" }} axisLine={false} tickLine={false} />
+            <YAxis dataKey="y" type="number" name="Latitud" domain={["auto", "auto"]}
+              tick={{ fontSize: 9, fill: "#cbd5e1" }} axisLine={false} tickLine={false} />
+            <Tooltip
+              cursor={{ strokeDasharray: "3 3" }}
+              contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: 11 }}
+              formatter={(_, name, props) => [props.payload.label ?? "", name]}
+            />
+            <Scatter data={data} opacity={0.6}>
+              {data.map((pt, i) => (
+                <Cell key={i} fill={getColor(pt.colorKey)} />
+              ))}
+            </Scatter>
+          </ScatterChart>
+        </ResponsiveContainer>
+      )}
     </div>
   )
 }

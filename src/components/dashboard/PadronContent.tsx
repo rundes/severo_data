@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { fetchSheetData } from "@/lib/sheets"
 import {
-  findCol, valueCounts, ageGroups, median, ageFromClase,
+  findCol, valueCounts, ageGroups, ageFromClase,
   COL, crossTab,
 } from "@/lib/columnMatcher"
 import KPICard from "@/components/charts/KPICard"
@@ -46,40 +46,60 @@ export default function PadronContent({ sheetId }: Props) {
   if (loading) return <LoadingSpinner label="Cargando padrón..." />
   if (error) return <ErrorState message={error} />
 
-  // ── Column detection ──────────────────────────────────────────────────────
-  const iSexo     = findCol(headers, COL.sexo)
-  const iClase    = findCol(headers, COL.clase)
-  const iMesa     = findCol(headers, COL.mesa)
-  const iEstab    = findCol(headers, COL.establecimiento)
-  const iLat      = findCol(headers, COL.lat)
-  const iLon      = findCol(headers, COL.lon)
-  const iProf     = findCol(headers, COL.profesion)
-  const iFuerza   = findCol(headers, COL.fuerza)
-  const iCirc     = findCol(headers, COL.circuito)
+  // ── Column detection ─────────────────────────────────────────────────────
+  const iSexo   = findCol(headers, COL.sexo)
+  const iClase  = findCol(headers, COL.clase)
+  const iMesa   = findCol(headers, COL.mesa)
+  const iEstab  = findCol(headers, COL.establecimiento)
+  const iLat    = findCol(headers, COL.lat)
+  const iLon    = findCol(headers, COL.lon)
+  const iProf   = findCol(headers, COL.profesion)
+  const iFuerza = findCol(headers, COL.fuerza)
+  const iCirc   = findCol(headers, COL.circuito)
 
   // ── KPI calculations ─────────────────────────────────────────────────────
-  const total = rows.length
+  const total       = rows.length
   const extranjeros = iMesa >= 0 ? rows.filter(r => String(r[iMesa]).trim() === "9001").length : 0
-  const pctExtr = total ? Math.round((extranjeros / total) * 100) : 0
+  const nativos     = total - extranjeros
+  const pctExtr     = total ? Math.round((extranjeros / total) * 100) : 0
+  const pctNat      = total ? 100 - pctExtr : 0
 
-  const ages = iClase >= 0
+  const ages      = iClase >= 0
     ? rows.map(r => ageFromClase(r[iClase])).filter((a): a is number => a !== null)
     : []
-  const medianAge = ages.length ? Math.round(median(ages)) : null
-  const primerVoto = ages.filter(a => a >= 16 && a <= 18).length
-  const adultMayores = ages.filter(a => a >= 65).length
-  const sinGeo = iLat >= 0 ? rows.filter(r => !r[iLat] || !r[iLon]).length : null
+  const avgAge    = ages.length ? Math.round(ages.reduce((s, a) => s + a, 0) / ages.length) : null
+  const primerVoto    = ages.filter(a => a >= 16 && a <= 18).length
+  const adultMayores  = ages.filter(a => a >= 65).length
+  const sinGeo    = iLat >= 0 ? rows.filter(r => !r[iLat] || !r[iLon]).length : null
 
   // ── Chart data ────────────────────────────────────────────────────────────
-  const sexoData = iSexo >= 0 ? valueCounts(rows, iSexo) : []
-  const mesaData = iMesa >= 0 ? valueCounts(rows, iMesa, 35).map(d => ({
-    name: String(d.name), value: d.value
-  })) : []
-  const estabData = iEstab >= 0 ? valueCounts(rows, iEstab, 20) : []
-  const profData  = iProf >= 0 ? valueCounts(rows, iProf, 20) : []
-  const fuerzaData = iFuerza >= 0 ? valueCounts(rows, iFuerza, 20) : []
-  const circData  = iCirc >= 0 ? valueCounts(rows, iCirc, 20) : []
-  const ageData   = iClase >= 0 ? ageGroups(rows, iClase, iSexo) : []
+  const sexoData    = iSexo   >= 0 ? valueCounts(rows, iSexo) : []
+  const mesaData    = iMesa   >= 0 ? valueCounts(rows, iMesa, 35).map(d => ({ name: String(d.name), value: d.value })) : []
+  const estabData   = iEstab  >= 0 ? valueCounts(rows, iEstab, 20) : []
+  const profData    = iProf   >= 0 ? valueCounts(rows, iProf, 20) : []
+  const fuerzaData  = iFuerza >= 0 ? valueCounts(rows, iFuerza, 20) : []
+  const circData    = iCirc   >= 0 ? valueCounts(rows, iCirc, 20) : []
+  const ageData     = iClase  >= 0 ? ageGroups(rows, iClase, iSexo) : []
+
+  // Nativos vs extranjeros pie
+  const origenData = extranjeros > 0
+    ? [
+        { name: "Nativos (argentinos)", value: nativos },
+        { name: "Extranjeros (mesa 9001)", value: extranjeros },
+      ]
+    : []
+
+  // Extranjeros breakdown by sex
+  const extranjerosRows = iMesa >= 0 ? rows.filter(r => String(r[iMesa]).trim() === "9001") : []
+  const extSexoData = (iSexo >= 0 && extranjerosRows.length > 0)
+    ? valueCounts(extranjerosRows, iSexo)
+    : []
+
+  // Nativos breakdown by sex
+  const nativosRows = iMesa >= 0 ? rows.filter(r => String(r[iMesa]).trim() !== "9001") : rows
+  const natSexoData = (iSexo >= 0 && nativosRows.length > 0)
+    ? valueCounts(nativosRows, iSexo)
+    : []
 
   const mesaFuerzaData = (iMesa >= 0 && iFuerza >= 0)
     ? crossTab(rows, iMesa, iFuerza).slice(0, 20)
@@ -88,17 +108,22 @@ export default function PadronContent({ sheetId }: Props) {
     ? [...new Set(rows.map(r => String(r[iFuerza] ?? "")).filter(Boolean))]
     : []
 
-  const scatterData = (iLat >= 0 && iLon >= 0)
-    ? rows
-        .filter(r => r[iLat] && r[iLon])
-        .slice(0, 3000)
-        .map(r => ({
-          x: Number(r[iLon]),
-          y: Number(r[iLat]),
-          label: iEstab >= 0 ? String(r[iEstab] ?? "") : "",
-          colorKey: iMesa >= 0 ? `Mesa ${r[iMesa]}` : undefined,
-        }))
+  const geoRows = (iLat >= 0 && iLon >= 0)
+    ? rows.filter(r => r[iLat] && r[iLon])
     : []
+
+  const scatterData = geoRows
+    .slice(0, 3000)
+    .map(r => ({
+      x: Number(r[iLon]),
+      y: Number(r[iLat]),
+      label: iEstab >= 0 ? String(r[iEstab] ?? "") : "",
+      colorKey: iMesa >= 0 ? `Mesa ${r[iMesa]}` : undefined,
+    }))
+
+  const heatData = geoRows
+    .slice(0, 5000)
+    .map(r => ({ x: Number(r[iLon]), y: Number(r[iLat]) }))
 
   return (
     <div className="space-y-8">
@@ -120,78 +145,148 @@ export default function PadronContent({ sheetId }: Props) {
         </button>
       </div>
 
-      {/* ★ CORE KPIs — sección 1.1 */}
+      {/* ★ KPIs demografía */}
       <section>
         <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Demografía básica</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <KPICard title="Total electores" value={total} color="#1e3a5f" />
-          {medianAge && <KPICard title="Mediana de edad" value={`${medianAge} años`} color="#0ea5e9" />}
-          {ages.length > 0 && <KPICard title="Primer voto (16–18)" value={primerVoto} color="#10b981" subtitle={`${Math.round(primerVoto/total*100)}% del padrón`} />}
-          {ages.length > 0 && <KPICard title="Adultos mayores (65+)" value={adultMayores} color="#8b5cf6" subtitle={`${Math.round(adultMayores/total*100)}% del padrón`} />}
+          {avgAge !== null && <KPICard title="Promedio de edad" value={`${avgAge} años`} color="#0ea5e9" />}
+          {ages.length > 0 && <KPICard title="Primer voto (16–18)" value={primerVoto} color="#10b981" subtitle={`${Math.round(primerVoto / total * 100)}% del padrón`} />}
+          {ages.length > 0 && <KPICard title="Adultos mayores (65+)" value={adultMayores} color="#8b5cf6" subtitle={`${Math.round(adultMayores / total * 100)}% del padrón`} />}
           {iMesa >= 0 && <KPICard title="Electores extranjeros" value={extranjeros} color="#f59e0b" subtitle={`${pctExtr}% — mesa 9001`} />}
         </div>
       </section>
 
-      {/* Sexo + Edad */}
+      {/* ★ Sexo + Edad */}
       {(sexoData.length > 0 || ageData.length > 0) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {sexoData.length > 0 && (
-            <PieChartComponent
-              data={sexoData}
-              dataKey="value"
-              nameKey="name"
-              title="★ Distribución por sexo"
-            />
+            <PieChartComponent data={sexoData} dataKey="value" nameKey="name" title="★ Distribución por sexo" />
           )}
           {ageData.length > 0 && (
             <BarChartComponent
-              data={ageData}
-              dataKey="value"
-              nameKey="name"
-              color="#0ea5e9"
-              title="★ Pirámide etaria (cohortes)"
+              data={ageData} dataKey="value" nameKey="name"
+              color="#0ea5e9" title="★ Pirámide etaria (cohortes)" total={total}
             />
           )}
         </div>
       )}
 
-      {/* ★ CORE — Estructura electoral */}
+      {/* ★ Nativos vs Extranjeros */}
+      {origenData.length > 0 && (
+        <section>
+          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Nativos y extranjeros</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <KPICard title="Electores nativos" value={nativos.toLocaleString("es-AR")} color="#1e3a5f" subtitle={`${pctNat}% del padrón`} />
+            <KPICard title="Electores extranjeros" value={extranjeros.toLocaleString("es-AR")} color="#f59e0b" subtitle={`${pctExtr}% — mesa 9001`} />
+            {extSexoData.find(d => /^[Ff]/i.test(String(d.name))) && (
+              <KPICard
+                title="Extranjeras (F)"
+                value={extSexoData.find(d => /^[Ff]/i.test(String(d.name)))?.value ?? 0}
+                color="#ec4899"
+                subtitle={`de ${extranjeros} extranjeros`}
+              />
+            )}
+            {extSexoData.find(d => /^[Mm]/i.test(String(d.name))) && (
+              <KPICard
+                title="Extranjeros (M)"
+                value={extSexoData.find(d => /^[Mm]/i.test(String(d.name)))?.value ?? 0}
+                color="#0ea5e9"
+                subtitle={`de ${extranjeros} extranjeros`}
+              />
+            )}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PieChartComponent
+              data={origenData} dataKey="value" nameKey="name"
+              title="★ Nativos vs extranjeros"
+            />
+            {extSexoData.length > 0 && natSexoData.length > 0 && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-700 mb-5">Distribución por sexo — nativos vs extranjeros</h3>
+                <div className="space-y-6">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-3">Nativos ({nativos.toLocaleString("es-AR")})</p>
+                    <div className="space-y-2">
+                      {natSexoData.map(d => (
+                        <div key={String(d.name)}>
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span className="text-gray-600">{String(d.name)}</span>
+                            <span className="font-semibold text-gray-700">
+                              {d.value.toLocaleString("es-AR")}
+                              <span className="text-gray-400 font-normal ml-1">({(d.value / nativos * 100).toFixed(1)}%)</span>
+                            </span>
+                          </div>
+                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-[#1e3a5f] rounded-full" style={{ width: `${d.value / nativos * 100}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-3">Extranjeros ({extranjeros.toLocaleString("es-AR")})</p>
+                    <div className="space-y-2">
+                      {extSexoData.map(d => (
+                        <div key={String(d.name)}>
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span className="text-gray-600">{String(d.name)}</span>
+                            <span className="font-semibold text-gray-700">
+                              {d.value.toLocaleString("es-AR")}
+                              <span className="text-gray-400 font-normal ml-1">({(d.value / extranjeros * 100).toFixed(1)}%)</span>
+                            </span>
+                          </div>
+                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-amber-400 rounded-full" style={{ width: `${d.value / extranjeros * 100}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ★ Estructura electoral */}
       {mesaData.length > 0 && (
         <section>
           <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Estructura electoral</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
             {iMesa >= 0 && <KPICard title="Cantidad de mesas" value={mesaData.length} color="#0ea5e9" />}
-            {mesaData.length > 0 && <KPICard title="Promedio x mesa" value={Math.round(total / mesaData.length)} color="#10b981" />}
-            {mesaData.length > 0 && <KPICard title="Mesa más grande" value={mesaData[0]?.value ?? 0} color="#f59e0b" subtitle={mesaData[0]?.name} />}
+            <KPICard title="Promedio x mesa" value={Math.round(total / mesaData.length)} color="#10b981" />
+            <KPICard title="Mesa más grande" value={mesaData[0]?.value ?? 0} color="#f59e0b" subtitle={mesaData[0]?.name} />
           </div>
-          <BarChartComponent data={mesaData} dataKey="value" nameKey="name" color="#1e3a5f" title="Electores por mesa" />
+          <BarChartComponent
+            data={mesaData} dataKey="value" nameKey="name"
+            color="#1e3a5f" title="Electores por mesa" total={total}
+          />
         </section>
       )}
 
       {estabData.length > 0 && (
         <HorizontalBarChart
-          data={estabData}
-          color="#0ea5e9"
+          data={estabData} color="#0ea5e9"
           title="★ Electores por establecimiento"
           subtitle="Logística de fiscalización"
+          total={total}
         />
       )}
 
-      {/* Cobertura JP */}
+      {/* ★ Cobertura JP */}
       {fuerzaData.length > 0 && (
         <section>
           <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Cobertura padrón JP</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <PieChartComponent
-              data={fuerzaData}
-              dataKey="value"
-              nameKey="name"
+              data={fuerzaData} dataKey="value" nameKey="name"
               title="★ Distribución por fuerza política (P23)"
             />
             {mesaFuerzaData.length > 0 && fuerzaKeys.length > 0 && (
               <StackedBarChart
-                data={mesaFuerzaData}
-                keys={fuerzaKeys}
+                data={mesaFuerzaData} keys={fuerzaKeys}
                 title="★ Cobertura JP por mesa"
                 subtitle="Identificación de fuerza por mesa"
                 badge="★ CORE"
@@ -201,41 +296,46 @@ export default function PadronContent({ sheetId }: Props) {
         </section>
       )}
 
-      {/* Mapa */}
-      {scatterData.length > 0 && (
+      {/* ★ Mapa de calor geográfico */}
+      {heatData.length > 0 && (
         <section>
           <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Geografía</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-            {sinGeo !== null && (
-              <KPICard
-                title="Sin geocodificación"
-                value={sinGeo}
-                color={sinGeo > 0 ? "#ef4444" : "#10b981"}
-                subtitle={`${Math.round(sinGeo/total*100)}% — a limpiar`}
-              />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <KPICard title="Georreferenciados" value={geoRows.length} color="#10b981" subtitle={`${Math.round(geoRows.length / total * 100)}% del padrón`} />
+            {sinGeo !== null && sinGeo > 0 && (
+              <KPICard title="Sin geocodificación" value={sinGeo} color="#ef4444" subtitle={`${Math.round(sinGeo / total * 100)}% — a limpiar`} />
             )}
-            <KPICard title="Georreferenciados" value={scatterData.length} color="#10b981" subtitle={`de ${total} totales`} />
           </div>
-          <ScatterMap
-            data={scatterData}
-            title="★ Mapa de electores (lat/lon)"
-            subtitle="Hasta 3.000 puntos — representación espacial aproximada"
-            badge="★ CORE"
-          />
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <ScatterMap
+              data={heatData}
+              title="★ Mapa de calor — densidad de electores"
+              subtitle={`${heatData.length.toLocaleString("es-AR")} electores georreferenciados`}
+              badge="★ CORE"
+              mode="heat"
+            />
+            <ScatterMap
+              data={scatterData}
+              title="★ Mapa de electores por establecimiento"
+              subtitle="Coloreado por mesa electoral"
+              badge="★ CORE"
+              mode="scatter"
+            />
+          </div>
         </section>
       )}
 
-      {/* Circuitos */}
+      {/* ● Circuitos */}
       {circData.length > 0 && (
         <HorizontalBarChart
-          data={circData}
-          color="#8b5cf6"
+          data={circData} color="#8b5cf6"
           title="● Distribución por circuito"
           badge="● QUICK WIN"
+          total={total}
         />
       )}
 
-      {/* Profesiones */}
+      {/* ◆ Profesiones */}
       {profData.length > 0 && (
         <HorizontalBarChart
           data={profData}
@@ -243,6 +343,7 @@ export default function PadronContent({ sheetId }: Props) {
           subtitle="Calidad del dato: % 'SIN INFORM'"
           badge="◆ AVANZADO"
           maxItems={20}
+          total={total}
         />
       )}
 
