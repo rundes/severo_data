@@ -19,11 +19,12 @@ import BarChartComponent from "@/components/charts/BarChartComponent"
 import DataTable from "@/components/dashboard/DataTable"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import ErrorState from "@/components/ui/ErrorState"
+import ScatterMap from "@/components/charts/ScatterMap"
 
 type Row = (string | number | null)[]
 interface Props { sheetId: string; votoSheetId?: string }
 
-type TabId = "resumen" | "territorio" | "perfil" | "contactabilidad" | "politica" | "calidad" | "cruce"
+type TabId = "resumen" | "territorio" | "perfil" | "contactabilidad" | "politica" | "cruce" | "mapa" | "calidad"
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "resumen",         label: "Resumen",         icon: "▦" },
@@ -32,6 +33,7 @@ const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "contactabilidad", label: "Contactabilidad",  icon: "◈" },
   { id: "politica",        label: "Política",         icon: "◆" },
   { id: "cruce",           label: "Cruce Electoral",  icon: "⊗" },
+  { id: "mapa",            label: "Mapas",            icon: "◎" },
   { id: "calidad",         label: "Calidad",          icon: "✓" },
 ]
 
@@ -94,6 +96,8 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
   const [manualPadronDni, setManualPadronDni] = useState<number>(-99)   // -99 = use auto
   const [manualVotoDni,   setManualVotoDni]   = useState<number>(-99)
   const [manualVotoCol,   setManualVotoCol]   = useState<number>(-99)
+  const [filterCircuito, setFilterCircuito] = useState<string>("")
+  const [mapMode, setMapMode] = useState<"electores" | "participacion" | "abstención" | "contactabilidad">("electores")
 
   // Fetch available sheet tabs for both sheets
   useEffect(() => {
@@ -189,8 +193,15 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
     iBarrio:    cols.barrio,
   }), [cols])
 
+  // ── Apply circuito filter ────────────────────────────────────────────────────
+  const displayRows = useMemo(() => {
+    if (!filterCircuito || cols.circ < 0) return rows
+    return rows.filter(r => String(r[cols.circ] ?? "").trim() === filterCircuito)
+  }, [rows, cols.circ, filterCircuito])
+
   // ── Analytics ───────────────────────────────────────────────────────────────
   const analytics = useMemo(() => {
+    const rows = displayRows
     if (!rows.length) return null
     const total = rows.length
 
@@ -233,8 +244,8 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
     // Completitud
     const completitud = calcularCompletitud(headers, rows)
 
-    // Geo
-    const geoRows = (cols.lat >= 0 && cols.lon >= 0)
+    // Geo (count for calidad/territorio tabs)
+    const geoRowsCount = (cols.lat >= 0 && cols.lon >= 0)
       ? rows.filter(r => !isBlank(r[cols.lat]) && !isBlank(r[cols.lon])).length
       : 0
 
@@ -402,10 +413,73 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
       { name: "Sin alcance",                value: seg.sinAlcance },
     ].filter(d => d.value > 0)
 
+    // ── Map data ─────────────────────────────────────────────────────────────
+    const geoRows = (cols.lat >= 0 && cols.lon >= 0)
+      ? rows.filter(r => !isBlank(r[cols.lat]) && !isBlank(r[cols.lon]))
+      : []
+
+    const SEG_COLORS: Record<string, string> = {
+      "Núcleo duro":           "#1e3a5f",
+      "Contactable digital":   "#10b981",
+      "Contactable territorial": "#0ea5e9",
+      "Persuadible":           "#f59e0b",
+      "Sin alcance":           "#ef4444",
+    }
+    const SEG_LABELS: Record<string, string> = {
+      nucleoDuro:              "Núcleo duro",
+      contactableDigital:      "Contactable digital",
+      contactableTerritorial:  "Contactable territorial",
+      persuadible:             "Persuadible",
+      sinAlcance:              "Sin alcance",
+    }
+
+    const mapPointsElectores = geoRows.map(r => ({
+      x: Number(r[cols.lon]),
+      y: Number(r[cols.lat]),
+      label: [r[cols.apellido], r[cols.nombre]].filter(Boolean).join(", ") || undefined,
+      colorKey: SEG_LABELS[segmentar(r, segCols)] ?? "Sin alcance",
+    }))
+
+    const mapPointsParticipacion = cols.voto >= 0
+      ? geoRows.map(r => {
+          const v = normalizaVoto(r[cols.voto])
+          return {
+            x: Number(r[cols.lon]),
+            y: Number(r[cols.lat]),
+            label: [r[cols.apellido], r[cols.nombre]].filter(Boolean).join(", ") || undefined,
+            colorKey: v === true ? "Votó" : v === false ? "No votó" : "Sin dato",
+          }
+        })
+      : []
+
+    const mapPointsAbstencion = cols.voto >= 0
+      ? geoRows.filter(r => {
+          if (normalizaVoto(r[cols.voto]) !== false) return false
+          return (cols.celular >= 0 && hasContactValue(r[cols.celular])) ||
+                 (cols.email >= 0 && hasContactValue(r[cols.email])) ||
+                 (cols.domicilio >= 0 && hasContactValue(r[cols.domicilio]))
+        }).map(r => ({
+          x: Number(r[cols.lon]),
+          y: Number(r[cols.lat]),
+          colorKey: "Abstención recuperable",
+        }))
+      : []
+
+    const mapPointsContacto = geoRows.map(r => {
+      const digital = (cols.celular >= 0 && hasContactValue(r[cols.celular])) ||
+                      (cols.email >= 0 && hasContactValue(r[cols.email]))
+      const territorial = cols.domicilio >= 0 && hasContactValue(r[cols.domicilio])
+      return {
+        x: Number(r[cols.lon]),
+        y: Number(r[cols.lat]),
+        colorKey: digital ? "Digital" : territorial ? "Territorial" : "Sin contacto",
+      }
+    })
+
     return {
       total, ages, avgAge, totalF, totalM,
       cntCelular, cntEmail, cntRedes, cntAnyContact, cntEnriched,
-      seg, indices, completitud, geoRows,
+      seg, indices, completitud, geoRowsCount,
       sexoData, ageGroupData, civilData, educData, afilData,
       mesaData, circData, contactByCircuito, segPieData,
       pctF: pct(totalF, total), pctM: pct(totalM, total),
@@ -416,8 +490,11 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
       pctParticipacion: votoKnown > 0 ? Math.round(votoSI / votoKnown * 100) : null,
       participacionCircuito, participacionMesa, participacionBySeg, participacionSexo,
       cruceSeg, fidelidadNucleo, abstencionRecuperable, cruceEdad, cruceSexo, mesaParticipacion,
+      geoRows: geoRows.length,
+      mapPointsElectores, mapPointsParticipacion, mapPointsAbstencion, mapPointsContacto,
+      SEG_COLORS,
     }
-  }, [rows, headers, cols, segCols])
+  }, [displayRows, headers, cols, segCols])
 
   if (loading) return <LoadingSpinner label="Cargando padrón enriquecido..." />
   if (error)   return <ErrorState message={error} />
@@ -463,6 +540,24 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
                   <option key={t.id} value={t.title}>{t.title}</option>
                 ))}
               </select>
+            </div>
+          )}
+          {a.circData.length > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider">Circuito</span>
+              <select
+                value={filterCircuito}
+                onChange={e => setFilterCircuito(e.target.value)}
+                className="text-xs border border-purple-200 rounded-lg px-2 py-1.5 text-purple-700 bg-white focus:outline-none focus:ring-2 focus:ring-purple-300"
+              >
+                <option value="">Todos</option>
+                {a.circData.map(c => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+              {filterCircuito && (
+                <button onClick={() => setFilterCircuito("")} className="text-xs text-purple-500 hover:text-purple-700 ml-1">✕</button>
+              )}
             </div>
           )}
           {votoSheetTabs.length > 0 && (
@@ -518,8 +613,12 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
               <KPICard title="% Mujeres" value={`${a.pctF}%`} color="#ec4899" subtitle={`${a.totalF.toLocaleString("es-AR")} electoras`} />
               <KPICard title="% Hombres" value={`${a.pctM}%`} color="#0ea5e9" subtitle={`${a.totalM.toLocaleString("es-AR")} electores`} />
               {a.avgAge !== null && <KPICard title="Edad promedio" value={`${a.avgAge} años`} color="#8b5cf6" />}
-              <KPICard title="% Enriquecido" value={`${a.pctEnriched}%`} color="#10b981" subtitle={`${a.cntEnriched.toLocaleString("es-AR")} registros`} />
-              <KPICard title="Contactables" value={`${a.pctContact}%`} color="#f59e0b" subtitle={`${a.cntAnyContact.toLocaleString("es-AR")} registros`} />
+              <KPICard title="% Enriquecido" value={`${a.pctEnriched}%`} color="#10b981"
+                subtitle={`${a.cntEnriched.toLocaleString("es-AR")} registros`}
+                alert={a.pctEnriched >= 60 ? "ok" : a.pctEnriched >= 30 ? "warn" : "danger"} />
+              <KPICard title="Contactables" value={`${a.pctContact}%`} color="#f59e0b"
+                subtitle={`${a.cntAnyContact.toLocaleString("es-AR")} registros`}
+                alert={a.pctContact >= 50 ? "ok" : a.pctContact >= 25 ? "warn" : "danger"} />
             </div>
           </section>
 
@@ -537,8 +636,12 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
             <section>
               <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-3">★ Participación electoral — datos reales del padrón</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <KPICard title="Participación real" value={`${a.pctParticipacion}%`} color="#10b981" subtitle={`${a.votoSI.toLocaleString("es-AR")} votaron`} />
-                <KPICard title="Ausentismo" value={`${100 - a.pctParticipacion}%`} color="#ef4444" subtitle={`${a.votoNO.toLocaleString("es-AR")} no votaron`} />
+                <KPICard title="Participación real" value={`${a.pctParticipacion}%`} color="#10b981"
+                    subtitle={`${a.votoSI.toLocaleString("es-AR")} votaron`}
+                    alert={a.pctParticipacion >= 70 ? "ok" : a.pctParticipacion >= 50 ? "warn" : "danger"} />
+                  <KPICard title="Ausentismo" value={`${100 - a.pctParticipacion}%`} color="#ef4444"
+                    subtitle={`${a.votoNO.toLocaleString("es-AR")} no votaron`}
+                    alert={(100 - a.pctParticipacion) <= 30 ? "ok" : (100 - a.pctParticipacion) <= 50 ? "warn" : "danger"} />
                 <KPICard title="Cruzados con voto" value={a.votoKnown.toLocaleString("es-AR")} color="#6b7280" subtitle={`${pct(a.votoKnown, a.total)}% del padrón`} />
                 <KPICard title="Sin info de voto" value={(a.total - a.votoKnown).toLocaleString("es-AR")} color="#d1d5db" subtitle="no cruzados" />
               </div>
@@ -1242,6 +1345,165 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
                   />
                 </div>
               </section>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* TAB: MAPA                                                              */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === "mapa" && (
+        <div className="space-y-6">
+          {(cols.lat < 0 || cols.lon < 0) ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-800">
+              <p className="font-semibold mb-1">Sin coordenadas geográficas</p>
+              <p>El padrón no tiene columnas de latitud/longitud detectables. Para activar los mapas, el sheet debe tener columnas nombradas "lat", "latitud", "lon", "longitud" o similares con coordenadas decimales.</p>
+            </div>
+          ) : (
+            <>
+              <section>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div>
+                    <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">★ Mapas de electores georreferenciados</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{a.geoRows.toLocaleString("es-AR")} de {a.total.toLocaleString("es-AR")} electores tienen coordenadas ({pct(a.geoRows, a.total)}%)</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(["electores", "participacion", "abstención", "contactabilidad"] as const).map(m => (
+                      <button
+                        key={m}
+                        onClick={() => setMapMode(m)}
+                        disabled={m === "participacion" && cols.voto < 0}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all capitalize disabled:opacity-30 disabled:cursor-not-allowed ${
+                          mapMode === m
+                            ? "bg-[#1e3a5f] text-white shadow"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {m === "electores" ? "Segmentos" :
+                         m === "participacion" ? "Participación" :
+                         m === "abstención" ? "Abstención" :
+                         "Contactabilidad"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {mapMode === "electores" && a.mapPointsElectores.length > 0 && (
+                  <div className="space-y-4">
+                    <ScatterMap
+                      data={a.mapPointsElectores}
+                      title="Distribución territorial por segmento electoral"
+                      subtitle="Cada punto = un elector, coloreado por segmento"
+                      badge="★ CORE"
+                      colorMap={a.SEG_COLORS}
+                      mode="scatter"
+                    />
+                    <ScatterMap
+                      data={a.mapPointsElectores}
+                      title="Mapa de calor — densidad de electores"
+                      subtitle="Intensidad de color = concentración de electores"
+                      badge="★ CORE"
+                      mode="heat"
+                    />
+                  </div>
+                )}
+
+                {mapMode === "participacion" && a.mapPointsParticipacion.length > 0 && (
+                  <div className="space-y-4">
+                    <ScatterMap
+                      data={a.mapPointsParticipacion}
+                      title="Mapa de participación electoral"
+                      subtitle="Verde = votó · Rojo = no votó · Gris = sin dato"
+                      badge="★ CORE"
+                      colorMap={{ "Votó": "#10b981", "No votó": "#ef4444", "Sin dato": "#cbd5e1" }}
+                      mode="scatter"
+                    />
+                    {a.mapPointsAbstencion.length > 0 && (
+                      <ScatterMap
+                        data={a.mapPointsAbstencion}
+                        title="Mapa de calor — abstención recuperable"
+                        subtitle="Zonas donde hay no-votantes con datos de contacto disponibles"
+                        badge="★ CORE"
+                        mode="heat"
+                      />
+                    )}
+                  </div>
+                )}
+
+                {mapMode === "abstención" && (
+                  <div className="space-y-4">
+                    {a.mapPointsAbstencion.length > 0 ? (
+                      <>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-2">
+                          <KPICard title="Abstención recuperable" value={a.abstencionRecuperable.toLocaleString("es-AR")} color="#f59e0b"
+                            subtitle="no votaron + tienen contacto"
+                            alert={a.abstencionRecuperable > 200 ? "warn" : "ok"} />
+                          <KPICard title="Con coordenadas" value={a.mapPointsAbstencion.length.toLocaleString("es-AR")} color="#0ea5e9"
+                            subtitle="mapeables" />
+                          <KPICard title="% del padrón" value={`${pct(a.abstencionRecuperable, a.total)}%`} color="#8b5cf6"
+                            subtitle="abstención recuperable" />
+                        </div>
+                        <ScatterMap
+                          data={a.mapPointsAbstencion}
+                          title="Distribución territorial — abstención recuperable"
+                          subtitle="No votaron pero tienen celular, email o domicilio conocido"
+                          badge="★ CORE"
+                          colorMap={{ "Abstención recuperable": "#f59e0b" }}
+                          mode="scatter"
+                        />
+                        <ScatterMap
+                          data={a.mapPointsAbstencion}
+                          title="Mapa de calor — zonas críticas de abstención recuperable"
+                          subtitle="Concentración territorial de votos a recuperar"
+                          badge="★ CORE"
+                          mode="heat"
+                        />
+                      </>
+                    ) : (
+                      <div className="bg-gray-50 rounded-2xl p-6 text-sm text-gray-500 text-center">
+                        {cols.voto < 0
+                          ? "Cargá el sheet de votos y cruzá los datos para ver la abstención recuperable."
+                          : "No hay registros de abstención recuperable con coordenadas."}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {mapMode === "contactabilidad" && a.mapPointsContacto.length > 0 && (
+                  <div className="space-y-4">
+                    <ScatterMap
+                      data={a.mapPointsContacto}
+                      title="Mapa de contactabilidad territorial"
+                      subtitle="Verde = digital (cel/email) · Azul = territorial (domicilio) · Rojo = sin contacto"
+                      badge="★ CORE"
+                      colorMap={{ "Digital": "#10b981", "Territorial": "#0ea5e9", "Sin contacto": "#ef4444" }}
+                      mode="scatter"
+                    />
+                    <ScatterMap
+                      data={a.mapPointsContacto.filter(p => p.colorKey === "Sin contacto")}
+                      title="Mapa de calor — zonas sin contacto"
+                      subtitle="Densidad de electores sin ningún dato de contacto disponible"
+                      badge="● QUICK WIN"
+                      mode="heat"
+                    />
+                  </div>
+                )}
+
+                {((mapMode === "electores" && !a.mapPointsElectores.length) ||
+                  (mapMode === "participacion" && !a.mapPointsParticipacion.length) ||
+                  (mapMode === "contactabilidad" && !a.mapPointsContacto.length)) && (
+                  <div className="bg-gray-50 rounded-2xl p-8 text-center text-sm text-gray-400">
+                    No hay electores con coordenadas geográficas en el filtro actual.
+                  </div>
+                )}
+              </section>
+
+              {filterCircuito && (
+                <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-2 text-xs text-purple-700 font-medium">
+                  Mostrando solo circuito: <strong>{filterCircuito}</strong> — {a.total.toLocaleString("es-AR")} electores
+                </div>
+              )}
             </>
           )}
         </div>
