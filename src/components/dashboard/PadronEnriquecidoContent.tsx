@@ -9,7 +9,8 @@ import {
   isBlank, hasContactValue, pctFilled, cleanValueCounts,
   calcularSegmentacion, calcularIndices, calcularCompletitud,
   exportCSV, exportSegment, exportReport,
-  type SegCols, type SegmentacionResult, type IndicesResult, type ColCompletitud,
+  normalizaVoto, joinSheetByKey, segmentar,
+  type SegCols, type SegmentacionResult, type IndicesResult, type ColCompletitud, type Segmento,
 } from "@/lib/dataUtils"
 import KPICard from "@/components/charts/KPICard"
 import PieChartComponent from "@/components/charts/PieChartComponent"
@@ -20,7 +21,7 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import ErrorState from "@/components/ui/ErrorState"
 
 type Row = (string | number | null)[]
-interface Props { sheetId: string }
+interface Props { sheetId: string; votoSheetId?: string }
 
 type TabId = "resumen" | "territorio" | "perfil" | "contactabilidad" | "politica" | "calidad"
 
@@ -74,18 +75,20 @@ function ChannelBar({ label, pct: p, count, total }: { label: string; pct: numbe
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function PadronEnriquecidoContent({ sheetId }: Props) {
+export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props) {
   const { accessToken } = useAuth()
-  const [loading, setLoading]       = useState(true)
-  const [error, setError]           = useState<string | null>(null)
-  const [headers, setHeaders]       = useState<string[]>([])
-  const [rows, setRows]             = useState<Row[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState<string | null>(null)
+  const [rawHeaders, setRawHeaders]   = useState<string[]>([])
+  const [rawRows, setRawRows]         = useState<Row[]>([])
+  const [votoHeaders, setVotoHeaders] = useState<string[]>([])
+  const [votoRows, setVotoRows]       = useState<Row[]>([])
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [activeTab, setActiveTab]   = useState<TabId>("resumen")
-  const [sheetTabs, setSheetTabs]   = useState<SheetTab[]>([])
+  const [activeTab, setActiveTab]     = useState<TabId>("resumen")
+  const [sheetTabs, setSheetTabs]     = useState<SheetTab[]>([])
   const [activeSheetTab, setActiveSheetTab] = useState<string>("")
 
-  // Fetch available sheet tabs (runs once per sheetId)
+  // Fetch available sheet tabs once
   useEffect(() => {
     if (!accessToken) return
     fetchSheetTabs(sheetId, accessToken)
@@ -102,15 +105,34 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
     try {
       setLoading(true); setError(null)
       const range = activeSheetTab ? `'${activeSheetTab}'!A:ZZ` : "A:ZZ"
-      const d = await fetchSheetData(sheetId, range, accessToken)
-      setHeaders(d.headers); setRows(d.rows)
+      const reqs: Promise<{ headers: string[]; rows: Row[] }>[] = [
+        fetchSheetData(sheetId, range, accessToken),
+      ]
+      if (votoSheetId) reqs.push(fetchSheetData(votoSheetId, "A:ZZ", accessToken))
+      const [padron, voto] = await Promise.all(reqs)
+      setRawHeaders(padron.headers); setRawRows(padron.rows)
+      if (voto) { setVotoHeaders(voto.headers); setVotoRows(voto.rows) }
       setLastUpdated(new Date())
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error desconocido")
     } finally { setLoading(false) }
-  }, [sheetId, accessToken, activeSheetTab])
+  }, [sheetId, votoSheetId, accessToken, activeSheetTab])
 
   useEffect(() => { load() }, [load])
+
+  // ── Join padrón + voto data by DNI ─────────────────────────────────────────
+  const { headers, rows, votoMatched } = useMemo(() => {
+    if (!votoRows.length || !votoHeaders.length)
+      return { headers: rawHeaders, rows: rawRows, votoMatched: 0 }
+    const mainDni = findCol(rawHeaders, COL.documento)
+    const joinDni = findCol(votoHeaders, COL.documento)
+    if (mainDni < 0 || joinDni < 0)
+      return { headers: rawHeaders, rows: rawRows, votoMatched: 0 }
+    const { headers, rows, matched } = joinSheetByKey(
+      rawHeaders, rawRows, mainDni, votoHeaders, votoRows, joinDni
+    )
+    return { headers, rows, votoMatched: matched }
+  }, [rawHeaders, rawRows, votoHeaders, votoRows])
 
   // ── Column detection ────────────────────────────────────────────────────────
   const cols = useMemo(() => ({
@@ -133,6 +155,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
     afil:      findCol(headers, COL.afiliacion),
     obs:       findCol(headers, COL.observaciones),
     prof:      findCol(headers, COL.profesion),
+    voto:      findCol(headers, COL.voto),
   }), [headers])
 
   const segCols: SegCols = useMemo(() => ({
@@ -224,6 +247,60 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
     const educData  = cols.educ  >= 0 ? cleanValueCounts(rows, cols.educ,  10) : []
     const afilData  = cols.afil  >= 0 ? cleanValueCounts(rows, cols.afil,  15) : []
 
+    // Participation
+    const votoSI  = cols.voto >= 0 ? rows.filter(r => normalizaVoto(r[cols.voto]) === true).length  : 0
+    const votoNO  = cols.voto >= 0 ? rows.filter(r => normalizaVoto(r[cols.voto]) === false).length : 0
+    const votoKnown = votoSI + votoNO
+
+    const participacionCircuito: { name: string; value: number }[] = []
+    if (cols.voto >= 0 && cols.circ >= 0) {
+      for (const { name } of cleanValueCounts(rows, cols.circ, 20)) {
+        const sub   = rows.filter(r => String(r[cols.circ] ?? "").trim() === name)
+        const si    = sub.filter(r => normalizaVoto(r[cols.voto]) === true).length
+        const known = sub.filter(r => normalizaVoto(r[cols.voto]) !== null).length
+        if (known > 0) participacionCircuito.push({ name, value: Math.round(si / known * 100) })
+      }
+      participacionCircuito.sort((a, b) => b.value - a.value)
+    }
+
+    const participacionMesa: { name: string; value: number }[] = []
+    if (cols.voto >= 0 && cols.mesa >= 0) {
+      for (const { name, value: cnt } of cleanValueCounts(rows, cols.mesa, 32)) {
+        const sub   = rows.filter(r => String(r[cols.mesa] ?? "").trim() === String(name))
+        const si    = sub.filter(r => normalizaVoto(r[cols.voto]) === true).length
+        const known = sub.filter(r => normalizaVoto(r[cols.voto]) !== null).length
+        if (known > 0) participacionMesa.push({ name: `Mesa ${name}`, value: Math.round(si / known * 100) })
+      }
+      participacionMesa.sort((a, b) => b.value - a.value)
+    }
+
+    const participacionBySeg: { name: string; value: number }[] = []
+    if (cols.voto >= 0) {
+      const SEGS: [Segmento, string][] = [
+        ["nucleoDuro",            "Núcleo duro"],
+        ["contactableDigital",    "Cont. digital"],
+        ["contactableTerritorial","Cont. territorial"],
+        ["persuadible",           "Persuadible"],
+        ["sinAlcance",            "Sin alcance"],
+      ]
+      for (const [seg, label] of SEGS) {
+        const sub   = rows.filter(r => segmentar(r, segCols) === seg)
+        const si    = sub.filter(r => normalizaVoto(r[cols.voto]) === true).length
+        const known = sub.filter(r => normalizaVoto(r[cols.voto]) !== null).length
+        if (known > 0) participacionBySeg.push({ name: label, value: Math.round(si / known * 100) })
+      }
+    }
+
+    const participacionSexo: { name: string; value: number }[] = []
+    if (cols.voto >= 0 && cols.sexo >= 0) {
+      for (const { name } of cleanValueCounts(rows, cols.sexo, 5)) {
+        const sub   = rows.filter(r => String(r[cols.sexo] ?? "").trim() === name)
+        const si    = sub.filter(r => normalizaVoto(r[cols.voto]) === true).length
+        const known = sub.filter(r => normalizaVoto(r[cols.voto]) !== null).length
+        if (known > 0) participacionSexo.push({ name, value: Math.round(si / known * 100) })
+      }
+    }
+
     // Segmentation pie data
     const segPieData = [
       { name: "Núcleo duro",               value: seg.nucleoDuro },
@@ -243,6 +320,9 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       pctCelular: pct(cntCelular, total), pctEmail: pct(cntEmail, total),
       pctRedes: pct(cntRedes, total), pctContact: pct(cntAnyContact, total),
       pctEnriched: pct(cntEnriched, total),
+      votoSI, votoNO, votoKnown,
+      pctParticipacion: votoKnown > 0 ? Math.round(votoSI / votoKnown * 100) : null,
+      participacionCircuito, participacionMesa, participacionBySeg, participacionSexo,
     }
   }, [rows, headers, cols, segCols])
 
@@ -273,6 +353,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           <h1 className="text-xl font-bold text-gray-900">Padrón Electoral Enriquecido</h1>
           <p className="text-gray-400 text-sm mt-0.5">
             {a.total.toLocaleString("es-AR")} electores · {headers.length} columnas detectadas
+            {votoMatched > 0 && ` · ${votoMatched.toLocaleString("es-AR")} cruzados con voto`}
           </p>
           {lastUpdated && <p className="text-xs text-gray-400 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
         </div>
@@ -341,6 +422,18 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               <IndexGauge label="Calidad de datos" value={a.indices.calidadDatos} color="#8b5cf6" />
             </div>
           </section>
+
+          {a.pctParticipacion !== null && (
+            <section>
+              <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-3">★ Participación electoral — datos reales del padrón</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <KPICard title="Participación real" value={`${a.pctParticipacion}%`} color="#10b981" subtitle={`${a.votoSI.toLocaleString("es-AR")} votaron`} />
+                <KPICard title="Ausentismo" value={`${100 - a.pctParticipacion}%`} color="#ef4444" subtitle={`${a.votoNO.toLocaleString("es-AR")} no votaron`} />
+                <KPICard title="Cruzados con voto" value={a.votoKnown.toLocaleString("es-AR")} color="#6b7280" subtitle={`${pct(a.votoKnown, a.total)}% del padrón`} />
+                <KPICard title="Sin info de voto" value={(a.total - a.votoKnown).toLocaleString("es-AR")} color="#d1d5db" subtitle="no cruzados" />
+              </div>
+            </section>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <section>
@@ -462,6 +555,28 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                     "mesas_padron.csv")}
                 />
               </div>
+            </section>
+          )}
+
+          {a.participacionCircuito.length > 0 && (
+            <section>
+              <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-3">★ Participación real por circuito (%)</p>
+              <HorizontalBarChart
+                data={a.participacionCircuito} color="#10b981"
+                title="% que votó por circuito"
+                badge="★ CORE"
+              />
+            </section>
+          )}
+
+          {a.participacionMesa.length > 0 && (
+            <section>
+              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Participación real por mesa (%)</p>
+              <HorizontalBarChart
+                data={a.participacionMesa} color="#0ea5e9"
+                title="% que votó por mesa"
+                badge="● QUICK WIN"
+              />
             </section>
           )}
         </div>

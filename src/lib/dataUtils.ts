@@ -234,3 +234,47 @@ export function exportReport(
   ]
   triggerDownload("﻿" + lines.join("\r\n"), `reporte_padron_${new Date().toISOString().slice(0,10)}.csv`)
 }
+
+// ─── Participación electoral ──────────────────────────────────────────────────
+
+/** Normalizes "votó / no votó" values to true/false/null */
+export function normalizaVoto(v: string | number | null): boolean | null {
+  if (v === null || v === undefined) return null
+  const s = String(v).trim().toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+  if (["SI", "S", "1", "TRUE", "VOTO", "VOTO SI", "X", "V", "ASISTIO", "CONCURRIO", "EMITIO"].includes(s)) return true
+  if (["NO", "N", "0", "FALSE", "NO VOTO", "NO ASISTIO", "AUSENTE"].includes(s)) return false
+  return null
+}
+
+/** Left-join two sheets by a key column (e.g. DNI). Normalizes key by stripping non-digits. */
+export function joinSheetByKey(
+  mainHeaders: string[], mainRows: Row[], mainKeyIdx: number,
+  joinHeaders: string[], joinRows: Row[], joinKeyIdx: number
+): { headers: string[]; rows: Row[]; matched: number } {
+  const normKey = (v: string | number | null) =>
+    String(v ?? "").replace(/\D/g, "").replace(/^0+/, "")
+
+  const lookup = new Map<string, Row>()
+  for (const row of joinRows) {
+    const k = normKey(row[joinKeyIdx])
+    if (k) lookup.set(k, row)
+  }
+
+  const extraCols = joinHeaders
+    .map((h, i) => ({ h, i }))
+    .filter(({ i }) => i !== joinKeyIdx)
+
+  let matched = 0
+  const newRows = mainRows.map(row => {
+    const k = normKey(row[mainKeyIdx])
+    const match = k ? lookup.get(k) : undefined
+    if (match) matched++
+    return [...row, ...extraCols.map(c => match ? (match[c.i] ?? null) : null)]
+  })
+
+  return {
+    headers: [...mainHeaders, ...extraCols.map(c => c.h)],
+    rows: newRows,
+    matched,
+  }
+}

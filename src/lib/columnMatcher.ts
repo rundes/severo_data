@@ -212,5 +212,6 @@ export const COL = {
   educacion: [/educaci[oó]n/i, /nivel.*educ/i, /nivel.*estudio/i, /\bescolaridad\b/i, /\binstrucci[oó]n\b/i, /nivel_educ/i, /\bestudio\b/i],
   afiliacion: [/afiliaci[oó]n/i, /\bafili[ao]\b/i, /\bmilitante\b/i, /partido.*afil/i, /afil.*partido/i, /\bpartido_pol/i],
   observaciones: [/observaci[oó]n/i, /\bnota\b/i, /\bcomentario\b/i, /\bobs\b/i],
+  voto: [/\bvot[oó]\b/i, /\bparticip[oó]\b/i, /\basisti[oó]\b/i, /\bconcurri[oó]\b/i, /\bsufrag[oó]\b/i, /\bemitiIó\b/i, /\bno.*vot\b/i, /\bsi.*vot\b/i],
 }
 
