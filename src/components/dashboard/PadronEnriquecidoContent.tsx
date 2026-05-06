@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { useAuth } from "@/contexts/AuthContext"
-import { fetchSheetData } from "@/lib/sheets"
+import { fetchSheetData, fetchSheetTabs } from "@/lib/sheets"
+import type { SheetTab } from "@/types"
 import { findCol, valueCounts, ageGroups, ageFromClase, COL } from "@/lib/columnMatcher"
 import {
   isBlank, hasContactValue, pctFilled, cleanValueCounts,
@@ -75,24 +76,39 @@ function ChannelBar({ label, pct: p, count, total }: { label: string; pct: numbe
 
 export default function PadronEnriquecidoContent({ sheetId }: Props) {
   const { accessToken } = useAuth()
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState<string | null>(null)
-  const [headers, setHeaders]   = useState<string[]>([])
-  const [rows, setRows]         = useState<Row[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState<string | null>(null)
+  const [headers, setHeaders]       = useState<string[]>([])
+  const [rows, setRows]             = useState<Row[]>([])
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [activeTab, setActiveTab] = useState<TabId>("resumen")
+  const [activeTab, setActiveTab]   = useState<TabId>("resumen")
+  const [sheetTabs, setSheetTabs]   = useState<SheetTab[]>([])
+  const [activeSheetTab, setActiveSheetTab] = useState<string>("")
+
+  // Fetch available sheet tabs (runs once per sheetId)
+  useEffect(() => {
+    if (!accessToken) return
+    fetchSheetTabs(sheetId, accessToken)
+      .then(tabs => {
+        setSheetTabs(tabs)
+        if (tabs.length > 0 && !activeSheetTab) setActiveSheetTab(tabs[0].title)
+      })
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheetId, accessToken])
 
   const load = useCallback(async () => {
     if (!accessToken) return
     try {
       setLoading(true); setError(null)
-      const d = await fetchSheetData(sheetId, "A:ZZ", accessToken)
+      const range = activeSheetTab ? `'${activeSheetTab}'!A:ZZ` : "A:ZZ"
+      const d = await fetchSheetData(sheetId, range, accessToken)
       setHeaders(d.headers); setRows(d.rows)
       setLastUpdated(new Date())
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error desconocido")
     } finally { setLoading(false) }
-  }, [sheetId, accessToken])
+  }, [sheetId, accessToken, activeSheetTab])
 
   useEffect(() => { load() }, [load])
 
@@ -260,12 +276,25 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           </p>
           {lastUpdated && <p className="text-xs text-gray-400 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
         </div>
-        <button onClick={load} className="flex items-center gap-1.5 text-xs text-sky-600 px-3 py-2 rounded-lg hover:bg-sky-50 border border-sky-200 transition-colors">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-          </svg>
-          Actualizar
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {sheetTabs.length > 1 && (
+            <select
+              value={activeSheetTab}
+              onChange={e => setActiveSheetTab(e.target.value)}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-sky-300"
+            >
+              {sheetTabs.map(t => (
+                <option key={t.id} value={t.title}>{t.title}</option>
+              ))}
+            </select>
+          )}
+          <button onClick={load} className="flex items-center gap-1.5 text-xs text-sky-600 px-3 py-2 rounded-lg hover:bg-sky-50 border border-sky-200 transition-colors">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Actualizar
+          </button>
+        </div>
       </div>
 
       {/* Tab bar */}
