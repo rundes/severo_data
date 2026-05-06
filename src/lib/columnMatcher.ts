@@ -143,7 +143,7 @@ export function median(nums: number[]): number {
 
 export const COL = {
   // Padrón
-  documento: [/\bdni\b/i, /documento/i, /doc\b/i],
+  documento: [/\bdni\b/i, /documento/i, /\bdoc\b/i, /n[uú]m.*doc/i, /nro.*doc/i, /num.*doc/i, /n[uú]mero.*doc/i, /id_?doc/i, /clave/i],
   sexo: [/\bsexo\b/i, /g[eé]nero/i],
   clase: [/\bclase\b/i, /a[ñn]o.*nac/i, /nacimiento/i, /birth/i],
   mesa: [/\bmesa\b/i],
@@ -212,6 +212,6 @@ export const COL = {
   educacion: [/educaci[oó]n/i, /nivel.*educ/i, /nivel.*estudio/i, /\bescolaridad\b/i, /\binstrucci[oó]n\b/i, /nivel_educ/i, /\bestudio\b/i],
   afiliacion: [/afiliaci[oó]n/i, /\bafili[ao]\b/i, /\bmilitante\b/i, /partido.*afil/i, /afil.*partido/i, /\bpartido_pol/i],
   observaciones: [/observaci[oó]n/i, /\bnota\b/i, /\bcomentario\b/i, /\bobs\b/i],
-  voto: [/\bvot[oó]\b/i, /\bparticip[oó]\b/i, /\basisti[oó]\b/i, /\bconcurri[oó]\b/i, /\bsufrag[oó]\b/i, /\bemitiIó\b/i, /\bno.*vot\b/i, /\bsi.*vot\b/i],
+  voto: [/\bvot[oó]\b/i, /\bvoto\b/i, /\bparticip/i, /\basisti[oó]\b/i, /\bconcurri[oó]\b/i, /\bsufrag/i, /\bemiti[oó]\b/i, /estado.*vot/i, /vot.*estado/i, /si.*vot/i, /no.*vot/i],
 }
 

@@ -88,6 +88,10 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
   const [activeTab, setActiveTab]     = useState<TabId>("resumen")
   const [sheetTabs, setSheetTabs]     = useState<SheetTab[]>([])
   const [activeSheetTab, setActiveSheetTab] = useState<string>("")
+  // Manual override for join columns (used when auto-detect fails)
+  const [manualPadronDni, setManualPadronDni] = useState<number>(-99)   // -99 = use auto
+  const [manualVotoDni,   setManualVotoDni]   = useState<number>(-99)
+  const [manualVotoCol,   setManualVotoCol]   = useState<number>(-99)
 
   // Fetch available sheet tabs once
   useEffect(() => {
@@ -122,18 +126,21 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
   useEffect(() => { load() }, [load])
 
   // ── Join padrón + voto data by DNI ─────────────────────────────────────────
-  const { headers, rows, votoMatched } = useMemo(() => {
-    if (!votoRows.length || !votoHeaders.length)
-      return { headers: rawHeaders, rows: rawRows, votoMatched: 0 }
-    const mainDni = findCol(rawHeaders, COL.documento)
-    const joinDni = findCol(votoHeaders, COL.documento)
-    if (mainDni < 0 || joinDni < 0)
-      return { headers: rawHeaders, rows: rawRows, votoMatched: 0 }
+  const { headers, rows, votoMatched, joinDiag } = useMemo(() => {
+    const noJoin = { headers: rawHeaders, rows: rawRows, votoMatched: 0, joinDiag: null as null | { mainDni: number; joinDni: number; votoColAuto: number } }
+    if (!votoRows.length || !votoHeaders.length) return noJoin
+
+    const mainDni  = manualPadronDni !== -99 ? manualPadronDni : findCol(rawHeaders, COL.documento)
+    const joinDni  = manualVotoDni   !== -99 ? manualVotoDni   : findCol(votoHeaders, COL.documento)
+    const votoColAuto = findCol(votoHeaders, COL.voto)
+
+    if (mainDni < 0 || joinDni < 0) return { ...noJoin, joinDiag: { mainDni, joinDni, votoColAuto } }
+
     const { headers, rows, matched } = joinSheetByKey(
       rawHeaders, rawRows, mainDni, votoHeaders, votoRows, joinDni
     )
-    return { headers, rows, votoMatched: matched }
-  }, [rawHeaders, rawRows, votoHeaders, votoRows])
+    return { headers, rows, votoMatched: matched, joinDiag: { mainDni, joinDni, votoColAuto } }
+  }, [rawHeaders, rawRows, votoHeaders, votoRows, manualPadronDni, manualVotoDni])
 
   // ── Column detection ────────────────────────────────────────────────────────
   const cols = useMemo(() => ({
@@ -156,8 +163,8 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
     afil:      findCol(headers, COL.afiliacion),
     obs:       findCol(headers, COL.observaciones),
     prof:      findCol(headers, COL.profesion),
-    voto:      findCol(headers, COL.voto),
-  }), [headers])
+    voto:      manualVotoCol !== -99 ? manualVotoCol : findCol(headers, COL.voto),
+  }), [headers, manualVotoCol])
 
   const segCols: SegCols = useMemo(() => ({
     iCelular:   cols.celular,
@@ -957,9 +964,64 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
       {activeTab === "cruce" && (
         <div className="space-y-6">
           {cols.voto < 0 ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-800">
-              <p className="font-semibold mb-1">Sin datos de voto cruzados</p>
-              <p>No se detectó la columna de participación (voto / asistió / concurrió) en el sheet cargado. Verificá que el sheet de votos esté cargado y que el join por DNI haya encontrado coincidencias.</p>
+            <div className="space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+                <p className="text-sm font-semibold text-amber-800 mb-1">Auto-detección falló — seleccioná las columnas manualmente</p>
+                <p className="text-xs text-amber-700">
+                  {!votoHeaders.length
+                    ? "El sheet de votos no se cargó. Verificá que el ID sea correcto y tengas acceso."
+                    : joinDiag && joinDiag.mainDni < 0
+                      ? `No se encontró columna DNI en el padrón. Columnas disponibles: ${rawHeaders.slice(0, 10).join(", ")}${rawHeaders.length > 10 ? "…" : ""}`
+                      : joinDiag && joinDiag.joinDni < 0
+                        ? `No se encontró columna DNI en el sheet de votos. Columnas: ${votoHeaders.join(", ")}`
+                        : `Join por DNI exitoso (${votoMatched} coincidencias) pero no se detectó la columna de voto. Seleccionala abajo.`
+                  }
+                </p>
+              </div>
+
+              {votoHeaders.length > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Configuración manual de columnas</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1.5">DNI en padrón</label>
+                      <select
+                        value={manualPadronDni === -99 ? "" : manualPadronDni}
+                        onChange={e => setManualPadronDni(e.target.value === "" ? -99 : Number(e.target.value))}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300"
+                      >
+                        <option value="">— auto ({rawHeaders[joinDiag?.mainDni ?? -1] ?? "no detectado"}) —</option>
+                        {rawHeaders.map((h, i) => <option key={i} value={i}>{h}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1.5">DNI en sheet de votos</label>
+                      <select
+                        value={manualVotoDni === -99 ? "" : manualVotoDni}
+                        onChange={e => setManualVotoDni(e.target.value === "" ? -99 : Number(e.target.value))}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300"
+                      >
+                        <option value="">— auto ({votoHeaders[joinDiag?.joinDni ?? -1] ?? "no detectado"}) —</option>
+                        {votoHeaders.map((h, i) => <option key={i} value={i}>{h}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1.5">Columna de voto / participación</label>
+                      <select
+                        value={manualVotoCol === -99 ? "" : manualVotoCol}
+                        onChange={e => setManualVotoCol(e.target.value === "" ? -99 : Number(e.target.value))}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300"
+                      >
+                        <option value="">— auto —</option>
+                        {headers.map((h, i) => <option key={i} value={i}>{h}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  {votoMatched > 0 && (
+                    <p className="text-xs text-green-600 font-medium">✓ Join exitoso: {votoMatched.toLocaleString("es-AR")} electores cruzados. Seleccioná la columna de voto arriba.</p>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <>
