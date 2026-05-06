@@ -735,6 +735,17 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
             </div>
           )}
 
+          {a.participacionBySeg.length > 0 && (
+            <section>
+              <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-3">★ Participación real por segmento (%)</p>
+              <HorizontalBarChart
+                data={a.participacionBySeg} color="#10b981"
+                title="% que votó por segmento electoral"
+                badge="★ CORE"
+              />
+            </section>
+          )}
+
           <div className="flex gap-3 flex-wrap">
             <ExportBtn label="Núcleo duro CSV" icon="⬇"
               onClick={() => exportSegment(headers, rows, segCols, "nucleoDuro", "nucleo_duro.csv")}

@@ -8,6 +8,12 @@ import {
 import KPICard from "@/components/charts/KPICard"
 import GroupedBarChart from "@/components/charts/GroupedBarChart"
 import HorizontalBarChart from "@/components/charts/HorizontalBarChart"
+import { useState, useEffect, useMemo, useCallback } from "react"
+import { useAuth } from "@/contexts/AuthContext"
+import { fetchSheetData } from "@/lib/sheets"
+import { findCol, COL } from "@/lib/columnMatcher"
+import { normalizaVoto, cleanValueCounts } from "@/lib/dataUtils"
+import LoadingSpinner from "@/components/ui/LoadingSpinner"
 
 // ─── Static data from Plan Analítico Electoral ────────────────────────────────
 
@@ -122,7 +128,62 @@ const mesasChartLLA = MESAS_PIVOTE.map(m => ({
   Oct: m.lla_oct,
 }))
 
-export default function ElectoralContent() {
+export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string }) {
+  const { accessToken } = useAuth()
+  const [votoHeaders, setVotoHeaders] = useState<string[]>([])
+  const [votoRows, setVotoRows]       = useState<(string | number | null)[][]>([])
+  const [votoLoading, setVotoLoading] = useState(false)
+
+  const loadVoto = useCallback(async () => {
+    if (!accessToken || !votoSheetId) return
+    try {
+      setVotoLoading(true)
+      const d = await fetchSheetData(votoSheetId, "A:ZZ", accessToken)
+      setVotoHeaders(d.headers); setVotoRows(d.rows)
+    } catch { /* silently ignore */ }
+    finally { setVotoLoading(false) }
+  }, [votoSheetId, accessToken])
+
+  useEffect(() => { loadVoto() }, [loadVoto])
+
+  const votoAnalytics = useMemo(() => {
+    if (!votoRows.length) return null
+    const iVoto = findCol(votoHeaders, COL.voto)
+    const iMesa = findCol(votoHeaders, COL.mesa)
+    const iCirc = findCol(votoHeaders, COL.circuito)
+    if (iVoto < 0) return null
+
+    const total = votoRows.length
+    const si  = votoRows.filter(r => normalizaVoto(r[iVoto]) === true).length
+    const no  = votoRows.filter(r => normalizaVoto(r[iVoto]) === false).length
+    const known = si + no
+    const pct   = known > 0 ? Math.round(si / known * 100) : 0
+
+    const byMesa: { name: string; value: number }[] = []
+    if (iMesa >= 0) {
+      for (const { name } of cleanValueCounts(votoRows, iMesa, 32)) {
+        const sub   = votoRows.filter(r => String(r[iMesa] ?? "").trim() === String(name))
+        const s     = sub.filter(r => normalizaVoto(r[iVoto]) === true).length
+        const k     = sub.filter(r => normalizaVoto(r[iVoto]) !== null).length
+        if (k > 0) byMesa.push({ name: `Mesa ${name}`, value: Math.round(s / k * 100) })
+      }
+      byMesa.sort((a, b) => b.value - a.value)
+    }
+
+    const byCirc: { name: string; value: number }[] = []
+    if (iCirc >= 0) {
+      for (const { name } of cleanValueCounts(votoRows, iCirc, 20)) {
+        const sub   = votoRows.filter(r => String(r[iCirc] ?? "").trim() === String(name))
+        const s     = sub.filter(r => normalizaVoto(r[iVoto]) === true).length
+        const k     = sub.filter(r => normalizaVoto(r[iVoto]) !== null).length
+        if (k > 0) byCirc.push({ name: String(name), value: Math.round(s / k * 100) })
+      }
+      byCirc.sort((a, b) => b.value - a.value)
+    }
+
+    return { total, si, no, known, pct, byMesa, byCirc }
+  }, [votoHeaders, votoRows])
+
   return (
     <div className="space-y-8">
 
@@ -463,6 +524,62 @@ export default function ElectoralContent() {
           </div>
         </div>
       </section>
+
+      {/* Participación real del padrón */}
+      {votoSheetId && (
+        <section>
+          <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-3">★ Participación real del padrón — datos vivos</p>
+          {votoLoading && <LoadingSpinner label="Cargando datos de participación..." />}
+          {!votoLoading && !votoAnalytics && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-sm text-amber-700">
+              No se detectó columna de voto en el sheet. Verificá que tenga una columna con "voto", "participó", "asistió" o similar.
+            </div>
+          )}
+          {!votoLoading && votoAnalytics && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <KPICard title="Participación real" value={`${votoAnalytics.pct}%`} color="#10b981" subtitle={`${votoAnalytics.si.toLocaleString("es-AR")} votaron`} />
+                <KPICard title="Ausentismo" value={`${100 - votoAnalytics.pct}%`} color="#ef4444" subtitle={`${votoAnalytics.no.toLocaleString("es-AR")} no votaron`} />
+                <KPICard title="Total con dato" value={votoAnalytics.known.toLocaleString("es-AR")} color="#6b7280" />
+                <KPICard title="Total registros" value={votoAnalytics.total.toLocaleString("es-AR")} color="#0ea5e9" />
+              </div>
+
+              {votoAnalytics.byCirc.length > 0 && (
+                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-4">Participación por circuito (%)</h3>
+                  <div className="space-y-2">
+                    {votoAnalytics.byCirc.map(c => (
+                      <div key={c.name}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-gray-600">{c.name}</span>
+                          <span className={`font-bold ${c.value >= 70 ? "text-green-600" : c.value >= 50 ? "text-amber-500" : "text-red-500"}`}>{c.value}%</span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${c.value}%`, backgroundColor: c.value >= 70 ? "#10b981" : c.value >= 50 ? "#f59e0b" : "#ef4444" }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {votoAnalytics.byMesa.length > 0 && (
+                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-4">Participación por mesa (%) — top {votoAnalytics.byMesa.length}</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-72 overflow-y-auto">
+                    {votoAnalytics.byMesa.map(m => (
+                      <div key={m.name} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2 text-xs">
+                        <span className="text-gray-600 font-medium">{m.name}</span>
+                        <span className={`font-bold ${m.value >= 70 ? "text-green-600" : m.value >= 50 ? "text-amber-500" : "text-red-500"}`}>{m.value}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Info derivados */}
       <section className="bg-sky-50 border border-sky-200 rounded-2xl p-5">
