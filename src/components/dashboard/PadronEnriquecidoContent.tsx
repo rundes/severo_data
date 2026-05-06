@@ -23,7 +23,7 @@ import ErrorState from "@/components/ui/ErrorState"
 type Row = (string | number | null)[]
 interface Props { sheetId: string; votoSheetId?: string }
 
-type TabId = "resumen" | "territorio" | "perfil" | "contactabilidad" | "politica" | "calidad"
+type TabId = "resumen" | "territorio" | "perfil" | "contactabilidad" | "politica" | "calidad" | "cruce"
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "resumen",         label: "Resumen",         icon: "▦" },
@@ -31,6 +31,7 @@ const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "perfil",          label: "Perfil",           icon: "◉" },
   { id: "contactabilidad", label: "Contactabilidad",  icon: "◈" },
   { id: "politica",        label: "Política",         icon: "◆" },
+  { id: "cruce",           label: "Cruce Electoral",  icon: "⊗" },
   { id: "calidad",         label: "Calidad",          icon: "✓" },
 ]
 
@@ -301,6 +302,76 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
       }
     }
 
+    // ── Cruce electoral avanzado ────────────────────────────────────────────
+    const SEGS_CFG: { seg: Segmento; label: string; color: string }[] = [
+      { seg: "nucleoDuro",             label: "Núcleo duro",           color: "#1e3a5f" },
+      { seg: "contactableDigital",     label: "Contactable digital",   color: "#10b981" },
+      { seg: "contactableTerritorial", label: "Contactable territ.",   color: "#0ea5e9" },
+      { seg: "persuadible",            label: "Persuadible",           color: "#f59e0b" },
+      { seg: "sinAlcance",             label: "Sin alcance",           color: "#ef4444" },
+    ]
+
+    const cruceSeg = SEGS_CFG.map(({ seg, label, color }) => {
+      const segRows = rows.filter(r => segmentar(r, segCols) === seg)
+      const si    = cols.voto >= 0 ? segRows.filter(r => normalizaVoto(r[cols.voto]) === true).length  : 0
+      const no    = cols.voto >= 0 ? segRows.filter(r => normalizaVoto(r[cols.voto]) === false).length : 0
+      const known = si + no
+      return { label, seg, color, total: segRows.length, si, no, known, pct: known > 0 ? Math.round(si / known * 100) : 0 }
+    })
+
+    const fidelidadNucleo = (() => {
+      const nd = cruceSeg.find(s => s.seg === "nucleoDuro")
+      return nd && nd.known > 0 ? nd.pct : null
+    })()
+
+    const abstencionRecuperable = cols.voto >= 0
+      ? rows.filter(r => {
+          if (normalizaVoto(r[cols.voto]) !== false) return false
+          return (cols.celular   >= 0 && hasContactValue(r[cols.celular]))  ||
+                 (cols.email     >= 0 && hasContactValue(r[cols.email]))    ||
+                 (cols.domicilio >= 0 && hasContactValue(r[cols.domicilio]))
+        }).length
+      : 0
+
+    const cruceEdad: { name: string; total: number; si: number; pct: number }[] = []
+    if (cols.voto >= 0 && cols.clase >= 0) {
+      const GRUPOS = [
+        { label: "16–18", min: 16, max: 18 },
+        { label: "19–29", min: 19, max: 29 },
+        { label: "30–44", min: 30, max: 44 },
+        { label: "45–64", min: 45, max: 64 },
+        { label: "65+",   min: 65, max: 120 },
+      ]
+      for (const g of GRUPOS) {
+        const sub   = rows.filter(r => { const a = ageFromClase(r[cols.clase]); return a !== null && a >= g.min && a <= g.max })
+        const si    = sub.filter(r => normalizaVoto(r[cols.voto]) === true).length
+        const known = sub.filter(r => normalizaVoto(r[cols.voto]) !== null).length
+        if (known > 0) cruceEdad.push({ name: g.label, total: sub.length, si, pct: Math.round(si / known * 100) })
+      }
+    }
+
+    const cruceSexo: { name: string; total: number; si: number; pct: number }[] = []
+    if (cols.voto >= 0 && cols.sexo >= 0) {
+      for (const { name } of cleanValueCounts(rows, cols.sexo, 5)) {
+        const sub   = rows.filter(r => String(r[cols.sexo] ?? "").trim() === name)
+        const si    = sub.filter(r => normalizaVoto(r[cols.voto]) === true).length
+        const known = sub.filter(r => normalizaVoto(r[cols.voto]) !== null).length
+        if (known > 0) cruceSexo.push({ name, total: sub.length, si, pct: Math.round(si / known * 100) })
+      }
+    }
+
+    const mesaParticipacion: { name: string; total: number; si: number; no: number; pct: number }[] = []
+    if (cols.voto >= 0 && cols.mesa >= 0) {
+      for (const { name } of cleanValueCounts(rows, cols.mesa, 50)) {
+        const sub   = rows.filter(r => String(r[cols.mesa] ?? "").trim() === String(name))
+        const si    = sub.filter(r => normalizaVoto(r[cols.voto]) === true).length
+        const no    = sub.filter(r => normalizaVoto(r[cols.voto]) === false).length
+        const known = si + no
+        if (known > 0) mesaParticipacion.push({ name: `Mesa ${name}`, total: sub.length, si, no, pct: Math.round(si / known * 100) })
+      }
+      mesaParticipacion.sort((a, b) => b.pct - a.pct)
+    }
+
     // Segmentation pie data
     const segPieData = [
       { name: "Núcleo duro",               value: seg.nucleoDuro },
@@ -323,6 +394,7 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
       votoSI, votoNO, votoKnown,
       pctParticipacion: votoKnown > 0 ? Math.round(votoSI / votoKnown * 100) : null,
       participacionCircuito, participacionMesa, participacionBySeg, participacionSexo,
+      cruceSeg, fidelidadNucleo, abstencionRecuperable, cruceEdad, cruceSexo, mesaParticipacion,
     }
   }, [rows, headers, cols, segCols])
 
@@ -876,6 +948,209 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
               <ExportBtn label="Reporte ejecutivo" icon="📊" onClick={() => exportReport(headers, rows, a.seg, a.indices)} color="green" />
             </div>
           </section>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* TAB: CRUCE ELECTORAL                                                  */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === "cruce" && (
+        <div className="space-y-6">
+          {cols.voto < 0 ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-800">
+              <p className="font-semibold mb-1">Sin datos de voto cruzados</p>
+              <p>No se detectó la columna de participación (voto / asistió / concurrió) en el sheet cargado. Verificá que el sheet de votos esté cargado y que el join por DNI haya encontrado coincidencias.</p>
+            </div>
+          ) : (
+            <>
+              {/* KPIs principales */}
+              <section>
+                <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Indicadores de participación real</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {a.pctParticipacion !== null && (
+                    <>
+                      <KPICard title="Participación real" value={`${a.pctParticipacion}%`} color="#10b981"
+                        subtitle={`${a.votoSI.toLocaleString("es-AR")} votaron`} />
+                      <KPICard title="Ausentismo" value={`${100 - a.pctParticipacion}%`} color="#ef4444"
+                        subtitle={`${a.votoNO.toLocaleString("es-AR")} no votaron`} />
+                    </>
+                  )}
+                  {a.fidelidadNucleo !== null && (
+                    <KPICard title="Fidelidad núcleo duro" value={`${a.fidelidadNucleo}%`} color="#1e3a5f"
+                      subtitle="del núcleo duro que votó" />
+                  )}
+                  {a.abstencionRecuperable > 0 && (
+                    <KPICard title="Abstención recuperable" value={a.abstencionRecuperable.toLocaleString("es-AR")} color="#f59e0b"
+                      subtitle="no votaron + tienen contacto" />
+                  )}
+                </div>
+              </section>
+
+              {/* Participación por segmento — tabla detallada */}
+              {a.cruceSeg.some(s => s.known > 0) && (
+                <section>
+                  <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Participación real por segmento electoral</p>
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                        <tr>
+                          <th className="text-left px-5 py-3">Segmento</th>
+                          <th className="text-right px-4 py-3">Total padrón</th>
+                          <th className="text-right px-4 py-3">Votaron</th>
+                          <th className="text-right px-4 py-3">No votaron</th>
+                          <th className="text-right px-4 py-3">% participación</th>
+                          <th className="px-4 py-3 w-32"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {a.cruceSeg.map(s => (
+                          <tr key={s.label} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-5 py-3 font-semibold" style={{ color: s.color }}>{s.label}</td>
+                            <td className="px-4 py-3 text-right text-gray-600">{s.total.toLocaleString("es-AR")}</td>
+                            <td className="px-4 py-3 text-right text-green-600 font-medium">{s.si.toLocaleString("es-AR")}</td>
+                            <td className="px-4 py-3 text-right text-red-500">{s.no.toLocaleString("es-AR")}</td>
+                            <td className="px-4 py-3 text-right font-bold" style={{ color: s.color }}>
+                              {s.known > 0 ? `${s.pct}%` : "—"}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${s.pct}%`, backgroundColor: s.color }} />
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Participación por edad */}
+                {a.cruceEdad.length > 0 && (
+                  <section>
+                    <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Participación por grupo etario (%)</p>
+                    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-3">
+                      {a.cruceEdad.map(g => (
+                        <div key={g.name}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="font-medium text-gray-700">{g.name}</span>
+                            <span className="font-bold text-sky-600">{g.pct}%
+                              <span className="text-xs text-gray-400 font-normal ml-2">
+                                {g.si.toLocaleString("es-AR")} / {g.total.toLocaleString("es-AR")}
+                              </span>
+                            </span>
+                          </div>
+                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${g.pct}%`, backgroundColor: g.pct >= 70 ? "#10b981" : g.pct >= 50 ? "#0ea5e9" : "#f59e0b" }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Participación por sexo */}
+                {a.cruceSexo.length > 0 && (
+                  <section>
+                    <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Participación por sexo (%)</p>
+                    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-4">
+                      {a.cruceSexo.map(s => (
+                        <div key={s.name}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="font-medium text-gray-700">{s.name}</span>
+                            <span className="font-bold text-purple-600">{s.pct}%
+                              <span className="text-xs text-gray-400 font-normal ml-2">
+                                {s.si.toLocaleString("es-AR")} / {s.total.toLocaleString("es-AR")}
+                              </span>
+                            </span>
+                          </div>
+                          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-purple-400" style={{ width: `${s.pct}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
+
+              {/* Ranking mesas por participación */}
+              {a.mesaParticipacion.length > 0 && (
+                <section>
+                  <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Ranking de mesas por participación real</p>
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto max-h-[420px]">
+                      <table className="w-full text-xs">
+                        <thead className="sticky top-0 bg-gray-50 text-gray-500 uppercase tracking-wider">
+                          <tr>
+                            <th className="text-left px-4 py-2.5">#</th>
+                            <th className="text-left px-4 py-2.5">Mesa</th>
+                            <th className="text-right px-4 py-2.5">Padrón</th>
+                            <th className="text-right px-4 py-2.5">Votaron</th>
+                            <th className="text-right px-4 py-2.5">Abstención</th>
+                            <th className="text-right px-4 py-2.5">% Partic.</th>
+                            <th className="px-4 py-2.5 w-24"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {a.mesaParticipacion.map((m, i) => (
+                            <tr key={m.name} className={`hover:bg-gray-50 ${i < 3 ? "bg-green-50/40" : i >= a.mesaParticipacion.length - 3 ? "bg-red-50/40" : ""}`}>
+                              <td className="px-4 py-2 text-gray-400 font-mono">{i + 1}</td>
+                              <td className="px-4 py-2 font-semibold text-gray-700">{m.name}</td>
+                              <td className="px-4 py-2 text-right text-gray-500">{m.total.toLocaleString("es-AR")}</td>
+                              <td className="px-4 py-2 text-right text-green-600 font-medium">{m.si.toLocaleString("es-AR")}</td>
+                              <td className="px-4 py-2 text-right text-red-500">{m.no.toLocaleString("es-AR")}</td>
+                              <td className="px-4 py-2 text-right font-bold" style={{ color: m.pct >= 70 ? "#10b981" : m.pct >= 50 ? "#f59e0b" : "#ef4444" }}>{m.pct}%</td>
+                              <td className="px-4 py-2">
+                                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full" style={{ width: `${m.pct}%`, backgroundColor: m.pct >= 70 ? "#10b981" : m.pct >= 50 ? "#f59e0b" : "#ef4444" }} />
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Exportes */}
+              <section className="bg-gray-50 rounded-2xl p-5 border border-gray-200">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Exportables del cruce</p>
+                <div className="flex flex-wrap gap-3">
+                  <ExportBtn label="Abstención recuperable CSV" icon="⬇"
+                    onClick={() => {
+                      if (cols.voto < 0) return
+                      const contactKeys = [cols.celular, cols.email, cols.domicilio].filter(i => i >= 0)
+                      const filtered = rows.filter(r =>
+                        normalizaVoto(r[cols.voto]) === false &&
+                        contactKeys.some(i => hasContactValue(r[i]))
+                      )
+                      exportCSV(headers, filtered, "abstencion_recuperable.csv")
+                    }}
+                    color="purple"
+                  />
+                  <ExportBtn label="Núcleo duro que NO votó" icon="⬇"
+                    onClick={() => {
+                      if (cols.voto < 0) return
+                      const filtered = rows.filter(r =>
+                        segmentar(r, segCols) === "nucleoDuro" &&
+                        normalizaVoto(r[cols.voto]) === false
+                      )
+                      exportCSV(headers, filtered, "nucleo_duro_abstencion.csv")
+                    }}
+                    color="sky"
+                  />
+                  <ExportBtn label="Padrón completo con voto" icon="⬇"
+                    onClick={() => exportCSV(headers, rows, "padron_con_voto.csv")}
+                    color="green"
+                  />
+                </div>
+              </section>
+            </>
+          )}
         </div>
       )}
 
