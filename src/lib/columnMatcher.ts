@@ -200,4 +200,17 @@ export const COL = {
   votosImpug: [/impugnados?/i, /recurridos?/i],
   electores: [/\belectores\b/i, /\bhabilitados\b/i, /\bpadr[oó]n\b/i],
   participacion: [/participaci[oó]n/i, /concurrencia/i, /\bvotaron\b/i],
+
+  // Padrón enriquecido — contactabilidad
+  celular: [/celular/i, /\bcel\b/i, /tel[eé]fono/i, /\btel\b/i, /\bphone\b/i, /m[oó]vil/i, /whatsapp/i, /\bwp\b/i],
+  email: [/\bemail\b/i, /\bcorreo\b/i, /e-mail/i, /correo.*elect/i],
+  redesSociales: [/red.*social/i, /social.*red/i, /facebook/i, /instagram/i, /twitter/i, /tiktok/i, /\bredes\b/i, /\bfb\b/i, /\big\b/i],
+  domicilio: [/\bdomicilio\b/i, /\bdirecci[oó]n\b/i, /\bcalle\b/i, /\bdir\b/i],
+
+  // Padrón enriquecido — perfil sociopolítico
+  estadoCivil: [/estado.*civil/i, /civil\b/i, /estado_civil/i, /\bcasad[ao]\b/i, /\bsolter[ao]\b/i],
+  educacion: [/educaci[oó]n/i, /nivel.*educ/i, /nivel.*estudio/i, /\bescolaridad\b/i, /\binstrucci[oó]n\b/i, /nivel_educ/i, /\bestudio\b/i],
+  afiliacion: [/afiliaci[oó]n/i, /\bafili[ao]\b/i, /\bmilitante\b/i, /partido.*afil/i, /afil.*partido/i, /\bpartido_pol/i],
+  observaciones: [/observaci[oó]n/i, /\bnota\b/i, /\bcomentario\b/i, /\bobs\b/i],
 }
+
