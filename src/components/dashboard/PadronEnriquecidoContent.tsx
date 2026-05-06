@@ -88,12 +88,14 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
   const [activeTab, setActiveTab]     = useState<TabId>("resumen")
   const [sheetTabs, setSheetTabs]     = useState<SheetTab[]>([])
   const [activeSheetTab, setActiveSheetTab] = useState<string>("")
+  const [votoSheetTabs, setVotoSheetTabs]   = useState<SheetTab[]>([])
+  const [activeVotoTab, setActiveVotoTab]   = useState<string>("")
   // Manual override for join columns (used when auto-detect fails)
   const [manualPadronDni, setManualPadronDni] = useState<number>(-99)   // -99 = use auto
   const [manualVotoDni,   setManualVotoDni]   = useState<number>(-99)
   const [manualVotoCol,   setManualVotoCol]   = useState<number>(-99)
 
-  // Fetch available sheet tabs once
+  // Fetch available sheet tabs for both sheets
   useEffect(() => {
     if (!accessToken) return
     fetchSheetTabs(sheetId, accessToken)
@@ -105,15 +107,27 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheetId, accessToken])
 
+  useEffect(() => {
+    if (!accessToken || !votoSheetId) return
+    fetchSheetTabs(votoSheetId, accessToken)
+      .then(tabs => {
+        setVotoSheetTabs(tabs)
+        if (tabs.length > 0 && !activeVotoTab) setActiveVotoTab(tabs[0].title)
+      })
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [votoSheetId, accessToken])
+
   const load = useCallback(async () => {
     if (!accessToken) return
     try {
       setLoading(true); setError(null)
-      const range = activeSheetTab ? `'${activeSheetTab}'!A:ZZ` : "A:ZZ"
+      const range     = activeSheetTab ? `'${activeSheetTab}'!A:ZZ` : "A:ZZ"
+      const votoRange = activeVotoTab  ? `'${activeVotoTab}'!A:ZZ`  : "A:ZZ"
       const reqs: Promise<{ headers: string[]; rows: Row[] }>[] = [
         fetchSheetData(sheetId, range, accessToken),
       ]
-      if (votoSheetId) reqs.push(fetchSheetData(votoSheetId, "A:ZZ", accessToken))
+      if (votoSheetId) reqs.push(fetchSheetData(votoSheetId, votoRange, accessToken))
       const [padron, voto] = await Promise.all(reqs)
       setRawHeaders(padron.headers); setRawRows(padron.rows)
       if (voto) { setVotoHeaders(voto.headers); setVotoRows(voto.rows) }
@@ -121,7 +135,7 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error desconocido")
     } finally { setLoading(false) }
-  }, [sheetId, votoSheetId, accessToken, activeSheetTab])
+  }, [sheetId, votoSheetId, accessToken, activeSheetTab, activeVotoTab])
 
   useEffect(() => { load() }, [load])
 
@@ -438,15 +452,32 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {sheetTabs.length > 1 && (
-            <select
-              value={activeSheetTab}
-              onChange={e => setActiveSheetTab(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-sky-300"
-            >
-              {sheetTabs.map(t => (
-                <option key={t.id} value={t.title}>{t.title}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider">Padrón</span>
+              <select
+                value={activeSheetTab}
+                onChange={e => setActiveSheetTab(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-sky-300"
+              >
+                {sheetTabs.map(t => (
+                  <option key={t.id} value={t.title}>{t.title}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {votoSheetTabs.length > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider">Votos</span>
+              <select
+                value={activeVotoTab}
+                onChange={e => setActiveVotoTab(e.target.value)}
+                className="text-xs border border-green-200 rounded-lg px-2 py-1.5 text-green-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
+              >
+                {votoSheetTabs.map(t => (
+                  <option key={t.id} value={t.title}>{t.title}</option>
+                ))}
+              </select>
+            </div>
           )}
           <button onClick={load} className="flex items-center gap-1.5 text-xs text-sky-600 px-3 py-2 rounded-lg hover:bg-sky-50 border border-sky-200 transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
