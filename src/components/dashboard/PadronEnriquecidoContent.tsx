@@ -9,9 +9,10 @@ import {
   isBlank, hasContactValue, pctFilled, cleanValueCounts,
   calcularSegmentacion, calcularIndices, calcularCompletitud,
   exportCSV, exportSegment, exportReport,
-  normalizaVoto, joinSheetByKey, segmentar,
+  normalizaVoto, segmentar,
   type SegCols, type SegmentacionResult, type IndicesResult, type ColCompletitud, type Segmento,
 } from "@/lib/dataUtils"
+import { normalizaParticipacion, electionStats } from "@/lib/columnMatcher"
 import KPICard from "@/components/charts/KPICard"
 import PieChartComponent from "@/components/charts/PieChartComponent"
 import HorizontalBarChart from "@/components/charts/HorizontalBarChart"
@@ -22,7 +23,7 @@ import ErrorState from "@/components/ui/ErrorState"
 import ScatterMap from "@/components/charts/ScatterMap"
 
 type Row = (string | number | null)[]
-interface Props { sheetId: string; votoSheetId?: string }
+interface Props { sheetId: string }
 
 type TabId = "resumen" | "territorio" | "perfil" | "contactabilidad" | "politica" | "cruce" | "mapa" | "calidad"
 
@@ -78,24 +79,16 @@ function ChannelBar({ label, pct: p, count, total }: { label: string; pct: numbe
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props) {
+export default function PadronEnriquecidoContent({ sheetId }: Props) {
   const { accessToken } = useAuth()
   const [loading, setLoading]         = useState(true)
   const [error, setError]             = useState<string | null>(null)
   const [rawHeaders, setRawHeaders]   = useState<string[]>([])
   const [rawRows, setRawRows]         = useState<Row[]>([])
-  const [votoHeaders, setVotoHeaders] = useState<string[]>([])
-  const [votoRows, setVotoRows]       = useState<Row[]>([])
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [activeTab, setActiveTab]     = useState<TabId>("resumen")
   const [sheetTabs, setSheetTabs]     = useState<SheetTab[]>([])
   const [activeSheetTab, setActiveSheetTab] = useState<string>("")
-  const [votoSheetTabs, setVotoSheetTabs]   = useState<SheetTab[]>([])
-  const [activeVotoTab, setActiveVotoTab]   = useState<string>("")
-  // Manual override for join columns (used when auto-detect fails)
-  const [manualPadronDni, setManualPadronDni] = useState<number>(-99)   // -99 = use auto
-  const [manualVotoDni,   setManualVotoDni]   = useState<number>(-99)
-  const [manualVotoCol,   setManualVotoCol]   = useState<number>(-99)
   const [filterCircuito, setFilterCircuito] = useState<string>("")
   const [mapMode, setMapMode] = useState<"electores" | "participacion" | "abstención" | "contactabilidad">("electores")
 
@@ -120,63 +113,24 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheetId, accessToken])
 
-  useEffect(() => {
-    if (!accessToken || !votoSheetId) return
-    fetchSheetTabs(votoSheetId, accessToken)
-      .then(tabs => {
-        setVotoSheetTabs(tabs)
-        if (tabs.length > 0 && !activeVotoTab) {
-          // Prefer a tab that looks like vote history
-          const best =
-            tabs.find(t => /historial.*voto|voto.*historial/i.test(t.title)) ??
-            tabs.find(t => /\bvoto\b/i.test(t.title)) ??
-            tabs.find(t => /historial/i.test(t.title)) ??
-            tabs.find(t => /participac/i.test(t.title)) ??
-            tabs[tabs.length - 1]
-          setActiveVotoTab(best.title)
-        }
-      })
-      .catch(() => {})
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [votoSheetId, accessToken])
-
   const load = useCallback(async () => {
     if (!accessToken) return
     try {
       setLoading(true); setError(null)
-      const range     = activeSheetTab ? `'${activeSheetTab}'!A:ZZ` : "A:ZZ"
-      const votoRange = activeVotoTab  ? `'${activeVotoTab}'!A:ZZ`  : "A:ZZ"
-      const reqs: Promise<{ headers: string[]; rows: Row[] }>[] = [
-        fetchSheetData(sheetId, range, accessToken),
-      ]
-      if (votoSheetId) reqs.push(fetchSheetData(votoSheetId, votoRange, accessToken))
-      const [padron, voto] = await Promise.all(reqs)
+      const range = activeSheetTab ? `'${activeSheetTab}'!A:ZZ` : "A:ZZ"
+      const padron = await fetchSheetData(sheetId, range, accessToken)
       setRawHeaders(padron.headers); setRawRows(padron.rows)
-      if (voto) { setVotoHeaders(voto.headers); setVotoRows(voto.rows) }
       setLastUpdated(new Date())
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error desconocido")
     } finally { setLoading(false) }
-  }, [sheetId, votoSheetId, accessToken, activeSheetTab, activeVotoTab])
+  }, [sheetId, accessToken, activeSheetTab])
 
   useEffect(() => { load() }, [load])
 
-  // ── Join padrón + voto data by DNI ─────────────────────────────────────────
-  const { headers, rows, votoMatched, joinDiag } = useMemo(() => {
-    const noJoin = { headers: rawHeaders, rows: rawRows, votoMatched: 0, joinDiag: null as null | { mainDni: number; joinDni: number; votoColAuto: number } }
-    if (!votoRows.length || !votoHeaders.length) return noJoin
-
-    const mainDni  = manualPadronDni !== -99 ? manualPadronDni : findCol(rawHeaders, COL.documento)
-    const joinDni  = manualVotoDni   !== -99 ? manualVotoDni   : findCol(votoHeaders, COL.documento)
-    const votoColAuto = findCol(votoHeaders, COL.voto)
-
-    if (mainDni < 0 || joinDni < 0) return { ...noJoin, joinDiag: { mainDni, joinDni, votoColAuto } }
-
-    const { headers, rows, matched } = joinSheetByKey(
-      rawHeaders, rawRows, mainDni, votoHeaders, votoRows, joinDni
-    )
-    return { headers, rows, votoMatched: matched, joinDiag: { mainDni, joinDni, votoColAuto } }
-  }, [rawHeaders, rawRows, votoHeaders, votoRows, manualPadronDni, manualVotoDni])
+  // ── Use inline padron data directly (vote participation is inline) ──────────
+  const headers = rawHeaders
+  const rows    = rawRows
 
   // ── Column detection ────────────────────────────────────────────────────────
   const cols = useMemo(() => ({
@@ -190,7 +144,8 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
     nombre:    findCol(headers, COL.nombre),
     apellido:  findCol(headers, COL.apellido),
     domicilio: findCol(headers, COL.domicilio),
-    barrio:    findCol(headers, COL.barrio),
+    domicilioReal: findCol(headers, COL.domicilioReal),
+    barrio:    findCol(headers, COL.localidad),
     celular:   findCol(headers, COL.celular),
     email:     findCol(headers, COL.email),
     redes:     findCol(headers, COL.redesSociales),
@@ -199,15 +154,28 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
     afil:      findCol(headers, COL.afiliacion),
     obs:       findCol(headers, COL.observaciones),
     prof:      findCol(headers, COL.profesion),
-    voto:      manualVotoCol !== -99 ? manualVotoCol : findCol(headers, COL.voto),
-  }), [headers, manualVotoCol])
+    auh:       findCol(headers, COL.auh),
+    ife:       findCol(headers, COL.ife),
+    // Inline election participation columns (VOTÓ / NO VOTÓ / SIN DATO)
+    votoSep25: findCol(headers, COL.votoSep25),
+    votoOct25: findCol(headers, COL.votoOct25),
+    votoPaso23: findCol(headers, COL.votoPaso23),
+    votoGen23: findCol(headers, COL.votoGen23),
+    votoBal23: findCol(headers, COL.votoBal23),
+    votoPaso21: findCol(headers, COL.votoPaso21),
+    votoGen21: findCol(headers, COL.votoGen21),
+    votoPaso19: findCol(headers, COL.votoPaso19),
+    votoGen19: findCol(headers, COL.votoGen19),
+    // Default "voto" for backward-compat uses Oct 2025 (most recent)
+    voto:      findCol(headers, COL.votoOct25) >= 0 ? findCol(headers, COL.votoOct25) : findCol(headers, COL.voto),
+  }), [headers])
 
   const segCols: SegCols = useMemo(() => ({
     iCelular:   cols.celular,
     iEmail:     cols.email,
     iRedes:     cols.redes,
     iAfil:      cols.afil,
-    iDomicilio: cols.domicilio,
+    iDomicilio: cols.domicilioReal >= 0 ? cols.domicilioReal : cols.domicilio,
     iBarrio:    cols.barrio,
   }), [cols])
 
@@ -298,6 +266,56 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
     const educData  = cols.educ  >= 0 ? cleanValueCounts(rows, cols.educ,  10) : []
     const afilData  = cols.afil  >= 0 ? cleanValueCounts(rows, cols.afil,  15) : []
 
+    // Multi-election participation (inline padrón columns)
+    const ELEC_COLS: { key: string; label: string; colIdx: number }[] = [
+      { key: "sep25",  label: "Sep 2025",       colIdx: cols.votoSep25  },
+      { key: "oct25",  label: "Oct 2025",        colIdx: cols.votoOct25  },
+      { key: "paso23", label: "PASO 2023",       colIdx: cols.votoPaso23 },
+      { key: "gen23",  label: "Generales 2023",  colIdx: cols.votoGen23  },
+      { key: "bal23",  label: "Balotaje 2023",   colIdx: cols.votoBal23  },
+      { key: "paso21", label: "PASO 2021",       colIdx: cols.votoPaso21 },
+      { key: "gen21",  label: "Generales 2021",  colIdx: cols.votoGen21  },
+      { key: "paso19", label: "PASO 2019",       colIdx: cols.votoPaso19 },
+      { key: "gen19",  label: "Generales 2019",  colIdx: cols.votoGen19  },
+    ].filter(e => e.colIdx >= 0)
+
+    const elecChartData = ELEC_COLS.map(e => {
+      const stats = electionStats(rows, e.colIdx)
+      const pctVoto = stats.voted + stats.notVoted > 0
+        ? Math.round(stats.voted / (stats.voted + stats.notVoted) * 100)
+        : null
+      return { name: e.label, value: pctVoto ?? 0, voted: stats.voted, notVoted: stats.notVoted, sinDato: stats.sinDato }
+    })
+
+    const statsSep25 = cols.votoSep25 >= 0 ? electionStats(rows, cols.votoSep25) : null
+    const statsOct25 = cols.votoOct25 >= 0 ? electionStats(rows, cols.votoOct25) : null
+    const pctSep25 = statsSep25 && (statsSep25.voted + statsSep25.notVoted > 0)
+      ? Math.round(statsSep25.voted / (statsSep25.voted + statsSep25.notVoted) * 100) : null
+    const pctOct25 = statsOct25 && (statsOct25.voted + statsOct25.notVoted > 0)
+      ? Math.round(statsOct25.voted / (statsOct25.voted + statsOct25.notVoted) * 100) : null
+    const caidaSepOct = (pctSep25 !== null && pctOct25 !== null) ? pctSep25 - pctOct25 : null
+
+    // Abstención Oct25 recuperable (no votó Oct25 + has contact)
+    const abstencionOct25Recuperable = cols.votoOct25 >= 0
+      ? rows.filter(r => {
+          if (normalizaParticipacion(r[cols.votoOct25]) !== false) return false
+          return (cols.celular >= 0 && hasContactValue(r[cols.celular]))  ||
+                 (cols.email   >= 0 && hasContactValue(r[cols.email]))    ||
+                 (cols.domicilioReal >= 0 && hasContactValue(r[cols.domicilioReal])) ||
+                 (cols.domicilio >= 0 && hasContactValue(r[cols.domicilio]))
+        }).length
+      : 0
+
+    // Votantes fieles = voted in all available elections (Oct25 + any 2 others)
+    const fidelColIdxs = ELEC_COLS.map(e => e.colIdx).filter(i => i >= 0)
+    const votantesFieles = fidelColIdxs.length >= 2
+      ? rows.filter(r => fidelColIdxs.every(i => normalizaParticipacion(r[i]) === true)).length
+      : 0
+
+    // AUH/IFE counts
+    const cntAUH = cols.auh >= 0 ? rows.filter(r => /^s[ií]$/i.test(String(r[cols.auh] ?? "").trim())).length : 0
+    const cntIFE = cols.ife >= 0 ? rows.filter(r => /^s[ií]$/i.test(String(r[cols.ife] ?? "").trim())).length : 0
+
     // Participation
     const votoSI  = cols.voto >= 0 ? rows.filter(r => normalizaVoto(r[cols.voto]) === true).length  : 0
     const votoNO  = cols.voto >= 0 ? rows.filter(r => normalizaVoto(r[cols.voto]) === false).length : 0
@@ -374,14 +392,16 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
       return nd && nd.known > 0 ? nd.pct : null
     })()
 
-    const abstencionRecuperable = cols.voto >= 0
-      ? rows.filter(r => {
-          if (normalizaVoto(r[cols.voto]) !== false) return false
-          return (cols.celular   >= 0 && hasContactValue(r[cols.celular]))  ||
-                 (cols.email     >= 0 && hasContactValue(r[cols.email]))    ||
-                 (cols.domicilio >= 0 && hasContactValue(r[cols.domicilio]))
-        }).length
-      : 0
+    const abstencionRecuperable = abstencionOct25Recuperable > 0
+      ? abstencionOct25Recuperable
+      : cols.voto >= 0
+        ? rows.filter(r => {
+            if (normalizaVoto(r[cols.voto]) !== false) return false
+            return (cols.celular   >= 0 && hasContactValue(r[cols.celular]))  ||
+                   (cols.email     >= 0 && hasContactValue(r[cols.email]))    ||
+                   (cols.domicilio >= 0 && hasContactValue(r[cols.domicilio]))
+          }).length
+        : 0
 
     const cruceEdad: { name: string; total: number; si: number; pct: number }[] = []
     if (cols.voto >= 0 && cols.clase >= 0) {
@@ -497,6 +517,9 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
     return {
       total, ages, avgAge, totalF, totalM,
       cntCelular, cntEmail, cntRedes, cntAnyContact, cntEnriched,
+      cntAUH, cntIFE,
+      elecChartData, pctSep25, pctOct25, caidaSepOct, votantesFieles,
+      abstencionOct25Recuperable,
       seg, indices, completitud, geoRowsCount,
       sexoData, ageGroupData, civilData, educData, afilData,
       mesaData, circData, contactByCircuito, segPieData,
@@ -541,7 +564,7 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
           <h1 className="text-xl font-bold text-gray-900">Padrón Electoral Enriquecido</h1>
           <p className="text-gray-400 text-sm mt-0.5">
             {a.total.toLocaleString("es-AR")} electores · {headers.length} columnas detectadas
-            {votoMatched > 0 && ` · ${votoMatched.toLocaleString("es-AR")} cruzados con voto`}
+            {a.pctOct25 !== null && ` · Participación Oct 2025: ${a.pctOct25}%`}
           </p>
           {lastUpdated && <p className="text-xs text-gray-400 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
         </div>
@@ -576,20 +599,6 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
               {filterCircuito && (
                 <button onClick={() => setFilterCircuito("")} className="text-xs text-purple-500 hover:text-purple-700 ml-1">✕</button>
               )}
-            </div>
-          )}
-          {votoSheetTabs.length > 0 && (
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] text-gray-400 uppercase tracking-wider">Votos</span>
-              <select
-                value={activeVotoTab}
-                onChange={e => setActiveVotoTab(e.target.value)}
-                className="text-xs border border-green-200 rounded-lg px-2 py-1.5 text-green-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
-              >
-                {votoSheetTabs.map(t => (
-                  <option key={t.id} value={t.title}>{t.title}</option>
-                ))}
-              </select>
             </div>
           )}
           <button onClick={load} className="flex items-center gap-1.5 text-xs text-sky-600 px-3 py-2 rounded-lg hover:bg-sky-50 border border-sky-200 transition-colors">
@@ -1115,67 +1124,90 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === "cruce" && (
         <div className="space-y-6">
-          {cols.voto < 0 ? (
-            <div className="space-y-4">
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-                <p className="text-sm font-semibold text-amber-800 mb-1">Auto-detección falló — seleccioná las columnas manualmente</p>
-                <p className="text-xs text-amber-700">
-                  {!votoHeaders.length
-                    ? "El sheet de votos no se cargó. Verificá que el ID sea correcto y tengas acceso."
-                    : joinDiag && joinDiag.mainDni < 0
-                      ? `No se encontró columna DNI en el padrón. Columnas disponibles: ${rawHeaders.slice(0, 10).join(", ")}${rawHeaders.length > 10 ? "…" : ""}`
-                      : joinDiag && joinDiag.joinDni < 0
-                        ? `No se encontró columna DNI en el sheet de votos. Columnas: ${votoHeaders.join(", ")}`
-                        : `Join por DNI exitoso (${votoMatched} coincidencias) pero no se detectó la columna de voto. Seleccionala abajo.`
-                  }
-                </p>
-              </div>
-
-              {votoHeaders.length > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Configuración manual de columnas</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1.5">DNI en padrón</label>
-                      <select
-                        value={manualPadronDni === -99 ? "" : manualPadronDni}
-                        onChange={e => setManualPadronDni(e.target.value === "" ? -99 : Number(e.target.value))}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300"
-                      >
-                        <option value="">— auto ({rawHeaders[joinDiag?.mainDni ?? -1] ?? "no detectado"}) —</option>
-                        {rawHeaders.map((h, i) => <option key={i} value={i}>{h}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1.5">DNI en sheet de votos</label>
-                      <select
-                        value={manualVotoDni === -99 ? "" : manualVotoDni}
-                        onChange={e => setManualVotoDni(e.target.value === "" ? -99 : Number(e.target.value))}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300"
-                      >
-                        <option value="">— auto ({votoHeaders[joinDiag?.joinDni ?? -1] ?? "no detectado"}) —</option>
-                        {votoHeaders.map((h, i) => <option key={i} value={i}>{h}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1.5">Columna de voto / participación</label>
-                      <select
-                        value={manualVotoCol === -99 ? "" : manualVotoCol}
-                        onChange={e => setManualVotoCol(e.target.value === "" ? -99 : Number(e.target.value))}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300"
-                      >
-                        <option value="">— auto —</option>
-                        {headers.map((h, i) => <option key={i} value={i}>{h}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  {votoMatched > 0 && (
-                    <p className="text-xs text-green-600 font-medium">✓ Join exitoso: {votoMatched.toLocaleString("es-AR")} electores cruzados. Seleccioná la columna de voto arriba.</p>
+          {/* Multi-election analytics — always shown if any election col detected */}
+          {a.elecChartData.length > 0 ? (
+            <>
+              {/* Sep/Oct 2025 KPIs — key metric */}
+              <section>
+                <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Participación electoral 2025 (datos inline del padrón)</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {a.pctSep25 !== null && (
+                    <KPICard title="Participación Sep 2025" value={`${a.pctSep25}%`} color="#10b981"
+                      subtitle="elecciones provinciales"
+                      alert={a.pctSep25 >= 65 ? "ok" : a.pctSep25 >= 50 ? "warn" : "danger"} />
+                  )}
+                  {a.pctOct25 !== null && (
+                    <KPICard title="Participación Oct 2025" value={`${a.pctOct25}%`} color="#0ea5e9"
+                      subtitle="elecciones nacionales"
+                      alert={a.pctOct25 >= 65 ? "ok" : a.pctOct25 >= 50 ? "warn" : "danger"} />
+                  )}
+                  {a.caidaSepOct !== null && (
+                    <KPICard
+                      title="Caída Sep→Oct" value={`${a.caidaSepOct > 0 ? "-" : "+"}${Math.abs(a.caidaSepOct)} pp`}
+                      color={a.caidaSepOct > 5 ? "#ef4444" : a.caidaSepOct > 2 ? "#f59e0b" : "#10b981"}
+                      subtitle="diferencial de participación"
+                      alert={a.caidaSepOct > 5 ? "danger" : a.caidaSepOct > 2 ? "warn" : "ok"} />
+                  )}
+                  {a.votantesFieles > 0 && (
+                    <KPICard title="Votantes fieles" value={a.votantesFieles.toLocaleString("es-AR")} color="#1e3a5f"
+                      subtitle={`${pct(a.votantesFieles, a.total)}% — votaron en todas`} />
                   )}
                 </div>
+              </section>
+
+              {/* Alert if Oct < Sep (anomaly) */}
+              {a.caidaSepOct !== null && a.caidaSepOct > 5 && (
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-700">
+                  <p className="font-semibold mb-1">Anomalía detectada: caída de participación Sep→Oct ({a.caidaSepOct} pp)</p>
+                  <p className="text-xs">Maipú registra una caída inusual entre elecciones provinciales y nacionales 2025. La media de la 5ta sección fue +3,71 pp. Investigar mesas con mayor caída.</p>
+                </div>
               )}
-            </div>
+
+              {/* Multi-election bar chart */}
+              <section>
+                <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Participación por elección (9 elecciones inline)</p>
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                  <BarChartComponent
+                    data={a.elecChartData}
+                    dataKey="value"
+                    nameKey="name"
+                    color="#1e3a5f"
+                    title="% participación por elección"
+                    total={100}
+                  />
+                </div>
+              </section>
+
+              {/* Abstención recuperable */}
+              {a.abstencionOct25Recuperable > 0 && (
+                <section>
+                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-3">● Abstención recuperable Oct 2025</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <KPICard title="Abstención recuperable" value={a.abstencionOct25Recuperable.toLocaleString("es-AR")} color="#f59e0b"
+                      subtitle="no votaron + tienen contacto"
+                      alert={a.abstencionOct25Recuperable > 200 ? "warn" : "ok"} />
+                    <KPICard title="% del padrón" value={`${pct(a.abstencionOct25Recuperable, a.total)}%`} color="#8b5cf6"
+                      subtitle="abstención con contacto" />
+                    {a.cntCelular > 0 && (
+                      <KPICard title="Con celular" value={`${a.pctCelular}%`} color="#0ea5e9"
+                        subtitle={`${a.cntCelular.toLocaleString("es-AR")} contactables`} />
+                    )}
+                  </div>
+                </section>
+              )}
+            </>
           ) : (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+              <p className="text-sm font-semibold text-amber-800 mb-1">Columnas de participación electoral no detectadas</p>
+              <p className="text-xs text-amber-700">
+                El padrón debe tener columnas con nombres exactos como &quot;2025 septiembre&quot;, &quot;2025 octubre&quot;, &quot;2023 PASO&quot;, etc. con valores VOTÓ / NO VOTÓ / SIN DATO.
+                Columnas detectadas: {headers.slice(0, 15).join(", ")}{headers.length > 15 ? "…" : ""}
+              </p>
+            </div>
+          )}
+
+          {/* Participation analytics (uses cols.voto = Oct2025) */}
+          {cols.voto >= 0 && (
             <>
               {/* KPIs principales */}
               <section>
