@@ -13,6 +13,8 @@ import {
   type SegCols, type SegmentacionResult, type IndicesResult, type ColCompletitud, type Segmento,
 } from "@/lib/dataUtils"
 import { normalizaParticipacion, electionStats } from "@/lib/columnMatcher"
+import { filterByBarrio } from "@/lib/barriosGeo"
+import BarrioFilter from "@/components/ui/BarrioFilter"
 import KPICard from "@/components/charts/KPICard"
 import PieChartComponent from "@/components/charts/PieChartComponent"
 import HorizontalBarChart from "@/components/charts/HorizontalBarChart"
@@ -90,6 +92,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
   const [sheetTabs, setSheetTabs]     = useState<SheetTab[]>([])
   const [activeSheetTab, setActiveSheetTab] = useState<string>("")
   const [filterCircuito, setFilterCircuito] = useState<string>("")
+  const [filterBarrio, setFilterBarrio] = useState<string>("")
   const [mapMode, setMapMode] = useState<"electores" | "participacion" | "abstención" | "contactabilidad">("electores")
 
   // Fetch available sheet tabs for both sheets
@@ -179,11 +182,17 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
     iBarrio:    cols.barrio,
   }), [cols])
 
-  // ── Apply circuito filter ────────────────────────────────────────────────────
+  // ── Apply circuito + barrio filters ─────────────────────────────────────────
   const displayRows = useMemo(() => {
-    if (!filterCircuito || cols.circ < 0) return rows
-    return rows.filter(r => String(r[cols.circ] ?? "").trim() === filterCircuito)
-  }, [rows, cols.circ, filterCircuito])
+    let r = rows
+    if (filterCircuito && cols.circ >= 0) {
+      r = r.filter(row => String(row[cols.circ] ?? "").trim() === filterCircuito)
+    }
+    if (filterBarrio) {
+      r = filterByBarrio(r, filterBarrio, cols.lat, cols.lon, cols.barrio)
+    }
+    return r
+  }, [rows, cols.circ, cols.lat, cols.lon, cols.barrio, filterCircuito, filterBarrio])
 
   // ── Analytics ───────────────────────────────────────────────────────────────
   const analytics = useMemo(() => {
@@ -565,6 +574,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           <p className="text-gray-400 text-sm mt-0.5">
             {a.total.toLocaleString("es-AR")} electores · {headers.length} columnas detectadas
             {a.pctOct25 !== null && ` · Participación Oct 2025: ${a.pctOct25}%`}
+            {(filterBarrio || filterCircuito) && <span className="text-sky-600"> · {rows.length.toLocaleString("es-AR")} totales</span>}
           </p>
           {lastUpdated && <p className="text-xs text-gray-400 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
         </div>
@@ -608,6 +618,11 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
             Actualizar
           </button>
         </div>
+      </div>
+
+      {/* Barrio filter */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3">
+        <BarrioFilter value={filterBarrio} onChange={setFilterBarrio} />
       </div>
 
       {/* Tab bar */}

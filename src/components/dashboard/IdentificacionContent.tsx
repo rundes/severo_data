@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { fetchSheetData, fetchSheetTabs } from "@/lib/sheets"
 import {
   findCol, valueCounts, ageGroups, p26ByBarrio, normalizeVoto,
   detectImageCols, extractImageUrls, COL,
 } from "@/lib/columnMatcher"
+import { filterByBarrio } from "@/lib/barriosGeo"
 import KPICard from "@/components/charts/KPICard"
 import PieChartComponent from "@/components/charts/PieChartComponent"
 import StackedBarChart from "@/components/charts/StackedBarChart"
@@ -14,6 +15,7 @@ import BarChartComponent from "@/components/charts/BarChartComponent"
 import LeafletMap from "@/components/charts/LeafletMapWrapper"
 import DataTable from "@/components/dashboard/DataTable"
 import ImageGallery from "@/components/dashboard/ImageGallery"
+import BarrioFilter from "@/components/ui/BarrioFilter"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import ErrorState from "@/components/ui/ErrorState"
 
@@ -29,6 +31,15 @@ export default function IdentificacionContent({ sheetId }: Props) {
   const [rows, setRows] = useState<Row[]>([])
   const [tabName, setTabName] = useState("")
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [selectedBarrio, setSelectedBarrio] = useState("")
+
+  const filteredRows = useMemo(() => {
+    if (!selectedBarrio) return rows
+    const iL = findCol(headers, COL.lat)
+    const iLo = findCol(headers, COL.lon)
+    const iB = findCol(headers, COL.barrio)
+    return filterByBarrio(rows, selectedBarrio, iL, iLo, iB)
+  }, [rows, headers, selectedBarrio])
 
   const load = useCallback(async () => {
     if (!accessToken) return
@@ -57,17 +68,17 @@ export default function IdentificacionContent({ sheetId }: Props) {
   const iLat    = findCol(headers, COL.lat)
   const iLon    = findCol(headers, COL.lon)
 
-  const imgCols = detectImageCols(headers, rows)
+  const imgCols = detectImageCols(headers, filteredRows)
   const imgNamedCol = findCol(headers, COL.foto)
   const allImgCols = [...new Set([...(imgNamedCol >= 0 ? [imgNamedCol] : []), ...imgCols])]
-  const allImageUrls = allImgCols.flatMap(ci => extractImageUrls(rows, ci))
+  const allImageUrls = allImgCols.flatMap(ci => extractImageUrls(filteredRows, ci))
 
   // P26 distribution
-  const p26Raw = iP26 >= 0 ? valueCounts(rows, iP26) : []
+  const p26Raw = iP26 >= 0 ? valueCounts(filteredRows, iP26) : []
   const p26Norm: { name: string; value: number }[] = []
   if (iP26 >= 0) {
     const counts: Record<string, number> = { SI: 0, NO: 0, DUDOSO: 0, OTRO: 0 }
-    rows.forEach(r => {
+    filteredRows.forEach(r => {
       const v = normalizeVoto(String(r[iP26] ?? ""))
       counts[v]++
     })
@@ -76,22 +87,21 @@ export default function IdentificacionContent({ sheetId }: Props) {
     })
   }
 
-  const total = rows.length
+  const total = filteredRows.length
   const totalSI = p26Norm.find(d => d.name === "SI")?.value ?? 0
   const totalNO = p26Norm.find(d => d.name === "NO")?.value ?? 0
   const pctSI = total ? Math.round(totalSI / total * 100) : 0
 
   // P26 × Barrio
-  const p26Barrio = (iP26 >= 0 && iBarrio >= 0) ? p26ByBarrio(rows, iBarrio, iP26) : []
+  const p26Barrio = (iP26 >= 0 && iBarrio >= 0) ? p26ByBarrio(filteredRows, iBarrio, iP26) : []
 
   // P26 × Edad
   const ageP26Data = (iClase >= 0 && iP26 >= 0)
     ? (() => {
-        const groups = ageGroups(rows, iClase)
-        // For simplicity, show SI% by age group
+        const groups = ageGroups(filteredRows, iClase)
         const siByGroup: Record<string, number> = {}
         const totalByGroup: Record<string, number> = {}
-        rows.forEach(r => {
+        filteredRows.forEach(r => {
           const age = Number(r[iClase])
           if (isNaN(age)) return
           const currentYear = 2026
@@ -119,7 +129,7 @@ export default function IdentificacionContent({ sheetId }: Props) {
 
   // Scatter by P26
   const scatterData = (iLat >= 0 && iLon >= 0 && iP26 >= 0)
-    ? rows
+    ? filteredRows
         .filter(r => r[iLat] && r[iLon])
         .slice(0, 2000)
         .map(r => ({
@@ -137,6 +147,7 @@ export default function IdentificacionContent({ sheetId }: Props) {
           <h1 className="text-xl font-bold text-gray-900">Identificación Electoral</h1>
           <p className="text-gray-400 text-sm mt-0.5">
             Hoja: <span className="font-medium">{tabName}</span> · {total.toLocaleString("es-AR")} registros
+            {selectedBarrio && <span className="text-sky-600"> · {rows.length.toLocaleString("es-AR")} totales</span>}
           </p>
           {lastUpdated && <p className="text-xs text-gray-400 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
         </div>
@@ -146,6 +157,11 @@ export default function IdentificacionContent({ sheetId }: Props) {
           </svg>
           Actualizar
         </button>
+      </div>
+
+      {/* Barrio filter */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3">
+        <BarrioFilter value={selectedBarrio} onChange={setSelectedBarrio} />
       </div>
 
       {iP26 < 0 && (
@@ -215,7 +231,7 @@ export default function IdentificacionContent({ sheetId }: Props) {
         </section>
       )}
 
-      {/* Columnas no detectadas */}
+      {/* Valores raw P26 */}
       {p26Raw.length > 0 && (
         <section>
           <h2 className="text-base font-semibold text-gray-700 mb-3">Valores raw — P26</h2>
@@ -240,7 +256,7 @@ export default function IdentificacionContent({ sheetId }: Props) {
 
       <section>
         <h2 className="text-base font-semibold text-gray-700 mb-3">Datos completos</h2>
-        <DataTable headers={headers} rows={rows} />
+        <DataTable headers={headers} rows={filteredRows} />
       </section>
     </div>
   )

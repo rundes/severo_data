@@ -1,15 +1,17 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { fetchSheetData, fetchSheetTabs } from "@/lib/sheets"
 import { findCol, valueCounts, detectImageCols, extractImageUrls, COL } from "@/lib/columnMatcher"
+import { filterByBarrio } from "@/lib/barriosGeo"
 import HorizontalBarChart from "@/components/charts/HorizontalBarChart"
 import PieChartComponent from "@/components/charts/PieChartComponent"
 import BarChartComponent from "@/components/charts/BarChartComponent"
 import LeafletMap from "@/components/charts/LeafletMapWrapper"
 import DataTable from "@/components/dashboard/DataTable"
 import ImageGallery from "@/components/dashboard/ImageGallery"
+import BarrioFilter from "@/components/ui/BarrioFilter"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import ErrorState from "@/components/ui/ErrorState"
 
@@ -25,6 +27,15 @@ export default function ProblematicasContent({ sheetId }: Props) {
   const [rows, setRows] = useState<Row[]>([])
   const [tabName, setTabName] = useState("")
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [selectedBarrio, setSelectedBarrio] = useState("")
+
+  const filteredRows = useMemo(() => {
+    if (!selectedBarrio) return rows
+    const iL = findCol(headers, COL.lat)
+    const iLo = findCol(headers, COL.lon)
+    const iB = findCol(headers, COL.barrio)
+    return filterByBarrio(rows, selectedBarrio, iL, iLo, iB)
+  }, [rows, headers, selectedBarrio])
 
   const load = useCallback(async () => {
     if (!accessToken) return
@@ -54,22 +65,22 @@ export default function ProblematicasContent({ sheetId }: Props) {
   const iLon     = findCol(headers, COL.lon)
 
   // Image columns detection
-  const imgCols = detectImageCols(headers, rows)
+  const imgCols = detectImageCols(headers, filteredRows)
   const imgNamedCol = findCol(headers, COL.foto)
   const allImgCols = [...new Set([...(imgNamedCol >= 0 ? [imgNamedCol] : []), ...imgCols])]
-  const allImageUrls = allImgCols.flatMap(ci => extractImageUrls(rows, ci))
+  const allImageUrls = allImgCols.flatMap(ci => extractImageUrls(filteredRows, ci))
 
-  const total = rows.length
+  const total = filteredRows.length
 
-  const tipoData    = iTipo >= 0 ? valueCounts(rows, iTipo, 15) : []
-  const gravedadData= iGravedad >= 0 ? valueCounts(rows, iGravedad, 10) : []
-  const barrioData  = iBarrio >= 0 ? valueCounts(rows, iBarrio, 15) : []
+  const tipoData    = iTipo >= 0 ? valueCounts(filteredRows, iTipo, 15) : []
+  const gravedadData= iGravedad >= 0 ? valueCounts(filteredRows, iGravedad, 10) : []
+  const barrioData  = iBarrio >= 0 ? valueCounts(filteredRows, iBarrio, 15) : []
 
   // Gravedad promedio por barrio (si gravedad es numérica)
   const gravByBarrio: { name: string; value: number }[] = []
   if (iBarrio >= 0 && iGravedad >= 0) {
     const groups: Record<string, number[]> = {}
-    rows.forEach(r => {
+    filteredRows.forEach(r => {
       const b = String(r[iBarrio] ?? "Sin dato").trim()
       const g = Number(r[iGravedad])
       if (!isNaN(g)) {
@@ -85,7 +96,7 @@ export default function ProblematicasContent({ sheetId }: Props) {
   }
 
   const scatterData = (iLat >= 0 && iLon >= 0)
-    ? rows
+    ? filteredRows
         .filter(r => r[iLat] && r[iLon])
         .slice(0, 2000)
         .map(r => ({
@@ -103,6 +114,7 @@ export default function ProblematicasContent({ sheetId }: Props) {
           <h1 className="text-xl font-bold text-gray-900">Problemáticas Urbanas</h1>
           <p className="text-gray-400 text-sm mt-0.5">
             Hoja: <span className="font-medium">{tabName}</span> · {total.toLocaleString("es-AR")} registros
+            {selectedBarrio && <span className="text-sky-600"> · {rows.length.toLocaleString("es-AR")} totales</span>}
           </p>
           {lastUpdated && <p className="text-xs text-gray-400 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
         </div>
@@ -112,6 +124,11 @@ export default function ProblematicasContent({ sheetId }: Props) {
           </svg>
           Actualizar
         </button>
+      </div>
+
+      {/* Barrio filter */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3">
+        <BarrioFilter value={selectedBarrio} onChange={setSelectedBarrio} />
       </div>
 
       {/* ★ Mapa + Top 10 */}
@@ -198,7 +215,7 @@ export default function ProblematicasContent({ sheetId }: Props) {
 
       <section>
         <h2 className="text-base font-semibold text-gray-700 mb-3">Datos completos</h2>
-        <DataTable headers={headers} rows={rows} />
+        <DataTable headers={headers} rows={filteredRows} />
       </section>
     </div>
   )

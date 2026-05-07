@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { fetchSheetData } from "@/lib/sheets"
 import {
   findCol, valueCounts, ageGroups, ageFromClase,
   COL, crossTab,
 } from "@/lib/columnMatcher"
+import { filterByBarrio } from "@/lib/barriosGeo"
 import KPICard from "@/components/charts/KPICard"
 import BarChartComponent from "@/components/charts/BarChartComponent"
 import HorizontalBarChart from "@/components/charts/HorizontalBarChart"
@@ -14,6 +15,7 @@ import PieChartComponent from "@/components/charts/PieChartComponent"
 import StackedBarChart from "@/components/charts/StackedBarChart"
 import LeafletMap from "@/components/charts/LeafletMapWrapper"
 import DataTable from "@/components/dashboard/DataTable"
+import BarrioFilter from "@/components/ui/BarrioFilter"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import ErrorState from "@/components/ui/ErrorState"
 
@@ -28,6 +30,15 @@ export default function PadronContent({ sheetId }: Props) {
   const [headers, setHeaders] = useState<string[]>([])
   const [rows, setRows] = useState<Row[]>([])
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [selectedBarrio, setSelectedBarrio] = useState("")
+
+  const filteredRows = useMemo(() => {
+    if (!selectedBarrio) return rows
+    const iL  = findCol(headers, COL.lat)
+    const iLo = findCol(headers, COL.lon)
+    const iB  = findCol(headers, COL.barrio)
+    return filterByBarrio(rows, selectedBarrio, iL, iLo, iB)
+  }, [rows, headers, selectedBarrio])
 
   const load = useCallback(async () => {
     if (!accessToken) return
@@ -58,28 +69,28 @@ export default function PadronContent({ sheetId }: Props) {
   const iCirc   = findCol(headers, COL.circuito)
 
   // ── KPI calculations ─────────────────────────────────────────────────────
-  const total       = rows.length
-  const extranjeros = iMesa >= 0 ? rows.filter(r => String(r[iMesa]).trim() === "9001").length : 0
+  const total       = filteredRows.length
+  const extranjeros = iMesa >= 0 ? filteredRows.filter(r => String(r[iMesa]).trim() === "9001").length : 0
   const nativos     = total - extranjeros
   const pctExtr     = total ? Math.round((extranjeros / total) * 100) : 0
   const pctNat      = total ? 100 - pctExtr : 0
 
   const ages      = iClase >= 0
-    ? rows.map(r => ageFromClase(r[iClase])).filter((a): a is number => a !== null)
+    ? filteredRows.map(r => ageFromClase(r[iClase])).filter((a): a is number => a !== null)
     : []
   const avgAge    = ages.length ? Math.round(ages.reduce((s, a) => s + a, 0) / ages.length) : null
   const primerVoto    = ages.filter(a => a >= 16 && a <= 18).length
   const adultMayores  = ages.filter(a => a >= 65).length
-  const sinGeo    = iLat >= 0 ? rows.filter(r => !r[iLat] || !r[iLon]).length : null
+  const sinGeo    = iLat >= 0 ? filteredRows.filter(r => !r[iLat] || !r[iLon]).length : null
 
   // ── Chart data ────────────────────────────────────────────────────────────
-  const sexoData    = iSexo   >= 0 ? valueCounts(rows, iSexo) : []
-  const mesaData    = iMesa   >= 0 ? valueCounts(rows, iMesa, 35).map(d => ({ name: String(d.name), value: d.value })) : []
-  const estabData   = iEstab  >= 0 ? valueCounts(rows, iEstab, 20) : []
-  const profData    = iProf   >= 0 ? valueCounts(rows, iProf, 20) : []
-  const fuerzaData  = iFuerza >= 0 ? valueCounts(rows, iFuerza, 20) : []
-  const circData    = iCirc   >= 0 ? valueCounts(rows, iCirc, 20) : []
-  const ageData     = iClase  >= 0 ? ageGroups(rows, iClase, iSexo) : []
+  const sexoData    = iSexo   >= 0 ? valueCounts(filteredRows, iSexo) : []
+  const mesaData    = iMesa   >= 0 ? valueCounts(filteredRows, iMesa, 35).map(d => ({ name: String(d.name), value: d.value })) : []
+  const estabData   = iEstab  >= 0 ? valueCounts(filteredRows, iEstab, 20) : []
+  const profData    = iProf   >= 0 ? valueCounts(filteredRows, iProf, 20) : []
+  const fuerzaData  = iFuerza >= 0 ? valueCounts(filteredRows, iFuerza, 20) : []
+  const circData    = iCirc   >= 0 ? valueCounts(filteredRows, iCirc, 20) : []
+  const ageData     = iClase  >= 0 ? ageGroups(filteredRows, iClase, iSexo) : []
 
   // Nativos vs extranjeros pie
   const origenData = extranjeros > 0
@@ -90,26 +101,26 @@ export default function PadronContent({ sheetId }: Props) {
     : []
 
   // Extranjeros breakdown by sex
-  const extranjerosRows = iMesa >= 0 ? rows.filter(r => String(r[iMesa]).trim() === "9001") : []
+  const extranjerosRows = iMesa >= 0 ? filteredRows.filter(r => String(r[iMesa]).trim() === "9001") : []
   const extSexoData = (iSexo >= 0 && extranjerosRows.length > 0)
     ? valueCounts(extranjerosRows, iSexo)
     : []
 
   // Nativos breakdown by sex
-  const nativosRows = iMesa >= 0 ? rows.filter(r => String(r[iMesa]).trim() !== "9001") : rows
+  const nativosRows = iMesa >= 0 ? filteredRows.filter(r => String(r[iMesa]).trim() !== "9001") : filteredRows
   const natSexoData = (iSexo >= 0 && nativosRows.length > 0)
     ? valueCounts(nativosRows, iSexo)
     : []
 
   const mesaFuerzaData = (iMesa >= 0 && iFuerza >= 0)
-    ? crossTab(rows, iMesa, iFuerza).slice(0, 20)
+    ? crossTab(filteredRows, iMesa, iFuerza).slice(0, 20)
     : []
   const fuerzaKeys = iFuerza >= 0
-    ? [...new Set(rows.map(r => String(r[iFuerza] ?? "")).filter(Boolean))]
+    ? [...new Set(filteredRows.map(r => String(r[iFuerza] ?? "")).filter(Boolean))]
     : []
 
   const geoRows = (iLat >= 0 && iLon >= 0)
-    ? rows.filter(r => r[iLat] && r[iLon])
+    ? filteredRows.filter(r => r[iLat] && r[iLon])
     : []
 
   const scatterData = geoRows
@@ -134,6 +145,7 @@ export default function PadronContent({ sheetId }: Props) {
           <p className="text-gray-400 text-sm mt-0.5">Demografía y estructura del padrón de Maipú 2025</p>
           <p className="text-xs text-gray-400 mt-1">
             {total.toLocaleString("es-AR")} registros
+            {selectedBarrio && <span className="text-sky-600"> · {rows.length.toLocaleString("es-AR")} totales</span>}
             {lastUpdated && ` · ${lastUpdated.toLocaleTimeString("es-AR")}`}
           </p>
         </div>
@@ -143,6 +155,11 @@ export default function PadronContent({ sheetId }: Props) {
           </svg>
           Actualizar
         </button>
+      </div>
+
+      {/* Barrio filter */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3">
+        <BarrioFilter value={selectedBarrio} onChange={setSelectedBarrio} />
       </div>
 
       {/* ★ KPIs demografía */}
@@ -350,7 +367,7 @@ export default function PadronContent({ sheetId }: Props) {
       {/* Tabla completa */}
       <section>
         <h2 className="text-base font-semibold text-gray-700 mb-3">Datos completos</h2>
-        <DataTable headers={headers} rows={rows} />
+        <DataTable headers={headers} rows={filteredRows} />
       </section>
     </div>
   )
