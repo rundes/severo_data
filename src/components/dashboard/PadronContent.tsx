@@ -12,7 +12,7 @@ import BarChartComponent from "@/components/charts/BarChartComponent"
 import HorizontalBarChart from "@/components/charts/HorizontalBarChart"
 import PieChartComponent from "@/components/charts/PieChartComponent"
 import StackedBarChart from "@/components/charts/StackedBarChart"
-import ScatterMap from "@/components/charts/ScatterMap"
+import LeafletMap from "@/components/charts/LeafletMapWrapper"
 import DataTable from "@/components/dashboard/DataTable"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import ErrorState from "@/components/ui/ErrorState"
@@ -307,14 +307,14 @@ export default function PadronContent({ sheetId }: Props) {
             )}
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <ScatterMap
+            <LeafletMap
               data={heatData}
               title="★ Mapa de calor — densidad de electores"
               subtitle={`${heatData.length.toLocaleString("es-AR")} electores georreferenciados`}
               badge="★ CORE"
               mode="heat"
             />
-            <ScatterMap
+            <LeafletMap
               data={scatterData}
               title="★ Mapa de electores por establecimiento"
               subtitle="Coloreado por mesa electoral"

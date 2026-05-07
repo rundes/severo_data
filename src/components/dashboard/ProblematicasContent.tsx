@@ -7,7 +7,7 @@ import { findCol, valueCounts, detectImageCols, extractImageUrls, COL } from "@/
 import HorizontalBarChart from "@/components/charts/HorizontalBarChart"
 import PieChartComponent from "@/components/charts/PieChartComponent"
 import BarChartComponent from "@/components/charts/BarChartComponent"
-import ScatterMap from "@/components/charts/ScatterMap"
+import LeafletMap from "@/components/charts/LeafletMapWrapper"
 import DataTable from "@/components/dashboard/DataTable"
 import ImageGallery from "@/components/dashboard/ImageGallery"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
@@ -119,7 +119,7 @@ export default function ProblematicasContent({ sheetId }: Props) {
         <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Distribución de problemas</p>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {scatterData.length > 0 ? (
-            <ScatterMap
+            <LeafletMap
               data={scatterData}
               title="★ Mapa de problemáticas"
               subtitle="Coloreado por tipo de problema"

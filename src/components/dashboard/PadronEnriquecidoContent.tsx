@@ -20,7 +20,7 @@ import BarChartComponent from "@/components/charts/BarChartComponent"
 import DataTable from "@/components/dashboard/DataTable"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import ErrorState from "@/components/ui/ErrorState"
-import ScatterMap from "@/components/charts/ScatterMap"
+import LeafletMap from "@/components/charts/LeafletMapWrapper"
 
 type Row = (string | number | null)[]
 interface Props { sheetId: string }
@@ -1441,7 +1441,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
                 {mapMode === "electores" && a.mapPointsElectores.length > 0 && (
                   <div className="space-y-4">
-                    <ScatterMap
+                    <LeafletMap
                       data={a.mapPointsElectores}
                       title="Distribución territorial por segmento electoral"
                       subtitle="Cada punto = un elector, coloreado por segmento"
@@ -1449,7 +1449,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                       colorMap={a.SEG_COLORS}
                       mode="scatter"
                     />
-                    <ScatterMap
+                    <LeafletMap
                       data={a.mapPointsElectores}
                       title="Mapa de calor — densidad de electores"
                       subtitle="Intensidad de color = concentración de electores"
@@ -1461,7 +1461,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
                 {mapMode === "participacion" && a.mapPointsParticipacion.length > 0 && (
                   <div className="space-y-4">
-                    <ScatterMap
+                    <LeafletMap
                       data={a.mapPointsParticipacion}
                       title="Mapa de participación electoral"
                       subtitle="Verde = votó · Rojo = no votó · Gris = sin dato"
@@ -1470,7 +1470,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                       mode="scatter"
                     />
                     {a.mapPointsAbstencion.length > 0 && (
-                      <ScatterMap
+                      <LeafletMap
                         data={a.mapPointsAbstencion}
                         title="Mapa de calor — abstención recuperable"
                         subtitle="Zonas donde hay no-votantes con datos de contacto disponibles"
@@ -1494,7 +1494,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                           <KPICard title="% del padrón" value={`${pct(a.abstencionRecuperable, a.total)}%`} color="#8b5cf6"
                             subtitle="abstención recuperable" />
                         </div>
-                        <ScatterMap
+                        <LeafletMap
                           data={a.mapPointsAbstencion}
                           title="Distribución territorial — abstención recuperable"
                           subtitle="No votaron pero tienen celular, email o domicilio conocido"
@@ -1502,7 +1502,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                           colorMap={{ "Abstención recuperable": "#f59e0b" }}
                           mode="scatter"
                         />
-                        <ScatterMap
+                        <LeafletMap
                           data={a.mapPointsAbstencion}
                           title="Mapa de calor — zonas críticas de abstención recuperable"
                           subtitle="Concentración territorial de votos a recuperar"
@@ -1522,7 +1522,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
                 {mapMode === "contactabilidad" && a.mapPointsContacto.length > 0 && (
                   <div className="space-y-4">
-                    <ScatterMap
+                    <LeafletMap
                       data={a.mapPointsContacto}
                       title="Mapa de contactabilidad territorial"
                       subtitle="Verde = digital (cel/email) · Azul = territorial (domicilio) · Rojo = sin contacto"
@@ -1530,7 +1530,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                       colorMap={{ "Digital": "#10b981", "Territorial": "#0ea5e9", "Sin contacto": "#ef4444" }}
                       mode="scatter"
                     />
-                    <ScatterMap
+                    <LeafletMap
                       data={a.mapPointsContacto.filter(p => p.colorKey === "Sin contacto")}
                       title="Mapa de calor — zonas sin contacto"
                       subtitle="Densidad de electores sin ningún dato de contacto disponible"

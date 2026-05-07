@@ -11,7 +11,7 @@ import KPICard from "@/components/charts/KPICard"
 import PieChartComponent from "@/components/charts/PieChartComponent"
 import StackedBarChart from "@/components/charts/StackedBarChart"
 import BarChartComponent from "@/components/charts/BarChartComponent"
-import ScatterMap from "@/components/charts/ScatterMap"
+import LeafletMap from "@/components/charts/LeafletMapWrapper"
 import DataTable from "@/components/dashboard/DataTable"
 import ImageGallery from "@/components/dashboard/ImageGallery"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
@@ -177,7 +177,7 @@ export default function IdentificacionContent({ sheetId }: Props) {
             title="★ Distribución P26 — ¿Nos votaría?"
           />
           {scatterData.length > 0 && (
-            <ScatterMap
+            <LeafletMap
               data={scatterData}
               title="★ Mapa de intención de voto (P26)"
               subtitle="Verde=SI · Rojo=NO · Amarillo=DUDOSO"
