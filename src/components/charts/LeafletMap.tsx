@@ -17,12 +17,52 @@ interface Props {
   colorMap?: Record<string, string>
   mode?: "scatter" | "heat"
   height?: number
+  showBarrios?: boolean
 }
 
 const DEFAULT_COLORS = [
   "#0ea5e9", "#10b981", "#f59e0b", "#ef4444",
   "#8b5cf6", "#ec4899", "#14b8a6",
 ]
+
+// Resolve the GeoJSON path accounting for the GitHub Pages basePath
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? ""
+const BARRIOS_GEOJSON = `${BASE}/barrios-maipu.geojson`
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function addBarriosLayer(L: any, map: any): Promise<void> {
+  try {
+    const res = await fetch(BARRIOS_GEOJSON)
+    if (!res.ok) return
+    const geojson = await res.json()
+
+    L.geoJSON(geojson, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      filter: (feature: any) => feature.geometry?.type === "Polygon",
+      style: {
+        color: "#1e3a5f",
+        weight: 2,
+        opacity: 0.8,
+        fillColor: "#0ea5e9",
+        fillOpacity: 0.08,
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onEachFeature: (feature: any, layer: any) => {
+        const name = feature.properties?.name ?? ""
+        if (name) {
+          layer.bindTooltip(name, {
+            permanent: false,
+            direction: "center",
+            className: "barrio-label",
+          })
+          layer.bindPopup(`<strong>${name}</strong>`)
+        }
+      },
+    }).addTo(map)
+  } catch {
+    // silently skip if file not found (e.g., dev without basePath)
+  }
+}
 
 export default function LeafletMap({
   data,
@@ -32,6 +72,7 @@ export default function LeafletMap({
   colorMap,
   mode = "scatter",
   height = 420,
+  showBarrios = true,
 }: Props) {
   const mapRef = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -76,6 +117,12 @@ export default function LeafletMap({
         maxZoom: 18,
       }).addTo(map)
 
+      // Barrio boundary layer (loaded from static GeoJSON)
+      if (showBarrios) {
+        await addBarriosLayer(L, map)
+        if (cancelled) return
+      }
+
       if (mode === "heat") {
         // leaflet.heat adds itself to the global L object
         await import("leaflet.heat")
@@ -105,12 +152,12 @@ export default function LeafletMap({
         subset.forEach((p) => {
           const color = autoColorMap[p.colorKey ?? "default"] ?? "#0ea5e9"
           L.circleMarker([p.y, p.x], {
-            radius: 6,
+            radius: 5,
             fillColor: color,
             color: "#fff",
             weight: 1,
             opacity: 1,
-            fillOpacity: 0.75,
+            fillOpacity: 0.85,
           })
             .bindPopup(p.label ?? "")
             .addTo(map)
@@ -132,7 +179,7 @@ export default function LeafletMap({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, mode, colorMap])
+  }, [data, mode, colorMap, showBarrios])
 
   if (!data.length) {
     return (
