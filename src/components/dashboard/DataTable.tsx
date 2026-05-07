@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { driveThumbUrl } from "@/lib/columnMatcher"
 
 interface Props {
   headers: string[]
@@ -8,6 +9,27 @@ interface Props {
 }
 
 const PAGE_SIZE = 10
+
+function CellValue({ value }: { value: string | number | null }) {
+  if (value === null || value === undefined) return <span className="text-gray-300">—</span>
+  const s = String(value).trim()
+  const imgSrc = driveThumbUrl(s, 80)
+  if (imgSrc) {
+    return (
+      <a href={s} target="_blank" rel="noopener noreferrer" title="Ver imagen completa">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imgSrc}
+          alt="foto"
+          className="w-12 h-12 object-cover rounded-lg border border-gray-200 hover:scale-110 transition-transform cursor-pointer shadow-sm"
+          onError={e => { (e.target as HTMLImageElement).style.display = "none" }}
+          loading="lazy"
+        />
+      </a>
+    )
+  }
+  return <span className="whitespace-nowrap max-w-xs truncate block">{s}</span>
+}
 
 export default function DataTable({ headers, rows }: Props) {
   const [page, setPage] = useState(0)
@@ -62,8 +84,8 @@ export default function DataTable({ headers, rows }: Props) {
               pageRows.map((row, ri) => (
                 <tr key={ri} className="hover:bg-slate-50 transition-colors">
                   {headers.map((_, ci) => (
-                    <td key={ci} className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap max-w-xs truncate">
-                      {row[ci] !== null ? String(row[ci]) : <span className="text-gray-300">—</span>}
+                    <td key={ci} className="px-4 py-3 text-sm text-gray-700">
+                      <CellValue value={row[ci]} />
                     </td>
                   ))}
                 </tr>

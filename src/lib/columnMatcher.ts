@@ -1,5 +1,45 @@
 type Row = (string | number | null)[]
 
+/** Convert any Google Drive share URL to a thumbnail src */
+export function driveThumbUrl(raw: string, size = 400): string | null {
+  const s = raw.trim()
+  // Already a direct image URL
+  if (/\.(jpe?g|png|gif|webp|avif)(\?|$)/i.test(s)) return s
+  // drive.google.com/file/d/FILE_ID/...
+  const m1 = s.match(/drive\.google\.com\/file\/d\/([^/?#]+)/)
+  if (m1) return `https://drive.google.com/thumbnail?id=${m1[1]}&sz=w${size}`
+  // drive.google.com/open?id=FILE_ID or ?id=FILE_ID
+  const m2 = s.match(/[?&]id=([^&]+)/)
+  if (m2) return `https://drive.google.com/thumbnail?id=${m2[1]}&sz=w${size}`
+  // uc?export=view&id=FILE_ID
+  const m3 = s.match(/uc\?.*id=([^&]+)/)
+  if (m3) return `https://drive.google.com/thumbnail?id=${m3[1]}&sz=w${size}`
+  return null
+}
+
+/** Find all image URLs in a column across all rows */
+export function extractImageUrls(rows: Row[], colIdx: number): string[] {
+  const urls: string[] = []
+  for (const row of rows) {
+    const val = String(row[colIdx] ?? "").trim()
+    if (!val) continue
+    const thumb = driveThumbUrl(val)
+    if (thumb) urls.push(thumb)
+  }
+  return urls
+}
+
+/** Detect image URL columns heuristically (column contains Drive links) */
+export function detectImageCols(headers: string[], rows: Row[]): number[] {
+  const sample = rows.slice(0, 50)
+  return headers.map((_, i) => i).filter(i => {
+    const vals = sample.map(r => String(r[i] ?? "")).filter(Boolean)
+    if (!vals.length) return false
+    const driveCount = vals.filter(v => driveThumbUrl(v) !== null).length
+    return driveCount / vals.length > 0.3
+  })
+}
+
 /** Find column index by regex patterns, returns -1 if not found */
 export function findCol(headers: string[], patterns: RegExp[]): number {
   for (const pat of patterns) {
@@ -161,6 +201,7 @@ export const COL = {
   barrio: [/\bP02\b/, /\bbarrio\b/i, /\bzona\b/i, /\blocalidad\b/i],
   fecha: [/timestamp/i, /\bfecha\b/i, /\bdate\b/i, /enviado/i, /creado/i],
   relevador: [/relevad[oa]r?/i, /encuestador/i, /operador/i, /\bmail\b/i, /\bemail\b/i, /responsable/i],
+  foto: [/\bfoto/i, /\bimage[nt]/i, /\bimagen/i, /\bfotograf/i, /\bphoto/i, /\bpic\b/i, /\badjunto/i, /\barchivo/i, /drive\.google/i, /upload/i],
 
   // Ciudadanos
   p26: [/\bP26\b/, /vot[ao]r[ií]a/i, /intencion/i, /nos votar/i],

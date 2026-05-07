@@ -3,11 +3,12 @@
 import { useEffect, useState, useCallback } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { fetchSheetData, fetchSheetTabs } from "@/lib/sheets"
-import { findCol, valueCounts, crossTab, COL } from "@/lib/columnMatcher"
+import { findCol, valueCounts, crossTab, detectImageCols, extractImageUrls, COL } from "@/lib/columnMatcher"
 import KPICard from "@/components/charts/KPICard"
 import PieChartComponent from "@/components/charts/PieChartComponent"
 import StackedBarChart from "@/components/charts/StackedBarChart"
 import DataTable from "@/components/dashboard/DataTable"
+import ImageGallery from "@/components/dashboard/ImageGallery"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import ErrorState from "@/components/ui/ErrorState"
 
@@ -52,6 +53,11 @@ export default function DiagnosticoContent({ sheetId }: Props) {
 
   if (loading) return <LoadingSpinner label="Cargando diagnóstico territorial..." />
   if (error) return <ErrorState message={error} />
+
+  const imgCols = detectImageCols(headers, rows)
+  const imgNamedCol = findCol(headers, COL.foto)
+  const allImgCols = [...new Set([...(imgNamedCol >= 0 ? [imgNamedCol] : []), ...imgCols])]
+  const allImageUrls = allImgCols.flatMap(ci => extractImageUrls(rows, ci))
 
   const iBarrio   = findCol(headers, COL.barrio)
   const iTenencia = findCol(headers, COL.tenencia)
@@ -192,6 +198,13 @@ export default function DiagnosticoContent({ sheetId }: Props) {
             <PieChartComponent data={tipoDiscData} dataKey="value" nameKey="name"
               title="● Tipo de discapacidad" />
           )}
+        </section>
+      )}
+
+      {allImageUrls.length > 0 && (
+        <section>
+          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Registro fotográfico</p>
+          <ImageGallery urls={allImageUrls} title="Fotos del relevamiento" badge="★ CORE" />
         </section>
       )}
 

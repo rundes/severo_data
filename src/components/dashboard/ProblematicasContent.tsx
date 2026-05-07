@@ -3,12 +3,13 @@
 import { useEffect, useState, useCallback } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { fetchSheetData, fetchSheetTabs } from "@/lib/sheets"
-import { findCol, valueCounts, COL } from "@/lib/columnMatcher"
+import { findCol, valueCounts, detectImageCols, extractImageUrls, COL } from "@/lib/columnMatcher"
 import HorizontalBarChart from "@/components/charts/HorizontalBarChart"
 import PieChartComponent from "@/components/charts/PieChartComponent"
 import BarChartComponent from "@/components/charts/BarChartComponent"
 import ScatterMap from "@/components/charts/ScatterMap"
 import DataTable from "@/components/dashboard/DataTable"
+import ImageGallery from "@/components/dashboard/ImageGallery"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import ErrorState from "@/components/ui/ErrorState"
 
@@ -51,6 +52,12 @@ export default function ProblematicasContent({ sheetId }: Props) {
   const iBarrio  = findCol(headers, COL.barrio)
   const iLat     = findCol(headers, COL.lat)
   const iLon     = findCol(headers, COL.lon)
+
+  // Image columns detection
+  const imgCols = detectImageCols(headers, rows)
+  const imgNamedCol = findCol(headers, COL.foto)
+  const allImgCols = [...new Set([...(imgNamedCol >= 0 ? [imgNamedCol] : []), ...imgCols])]
+  const allImageUrls = allImgCols.flatMap(ci => extractImageUrls(rows, ci))
 
   const total = rows.length
 
@@ -176,6 +183,18 @@ export default function ProblematicasContent({ sheetId }: Props) {
           />
         )}
       </div>
+
+      {/* Galería de fotos */}
+      {allImageUrls.length > 0 && (
+        <section>
+          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Registro fotográfico</p>
+          <ImageGallery
+            urls={allImageUrls}
+            title="Fotos del relevamiento"
+            badge="★ CORE"
+          />
+        </section>
+      )}
 
       <section>
         <h2 className="text-base font-semibold text-gray-700 mb-3">Datos completos</h2>

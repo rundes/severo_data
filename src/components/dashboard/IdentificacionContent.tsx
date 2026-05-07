@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { fetchSheetData, fetchSheetTabs } from "@/lib/sheets"
 import {
-  findCol, valueCounts, ageGroups, p26ByBarrio, normalizeVoto, COL,
+  findCol, valueCounts, ageGroups, p26ByBarrio, normalizeVoto,
+  detectImageCols, extractImageUrls, COL,
 } from "@/lib/columnMatcher"
 import KPICard from "@/components/charts/KPICard"
 import PieChartComponent from "@/components/charts/PieChartComponent"
@@ -12,6 +13,7 @@ import StackedBarChart from "@/components/charts/StackedBarChart"
 import BarChartComponent from "@/components/charts/BarChartComponent"
 import ScatterMap from "@/components/charts/ScatterMap"
 import DataTable from "@/components/dashboard/DataTable"
+import ImageGallery from "@/components/dashboard/ImageGallery"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import ErrorState from "@/components/ui/ErrorState"
 
@@ -54,6 +56,11 @@ export default function IdentificacionContent({ sheetId }: Props) {
   const iClase  = findCol(headers, COL.edadRelevado)
   const iLat    = findCol(headers, COL.lat)
   const iLon    = findCol(headers, COL.lon)
+
+  const imgCols = detectImageCols(headers, rows)
+  const imgNamedCol = findCol(headers, COL.foto)
+  const allImgCols = [...new Set([...(imgNamedCol >= 0 ? [imgNamedCol] : []), ...imgCols])]
+  const allImageUrls = allImgCols.flatMap(ci => extractImageUrls(rows, ci))
 
   // P26 distribution
   const p26Raw = iP26 >= 0 ? valueCounts(rows, iP26) : []
@@ -220,6 +227,14 @@ export default function IdentificacionContent({ sheetId }: Props) {
               </div>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* Galería de fotos */}
+      {allImageUrls.length > 0 && (
+        <section>
+          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Registro fotográfico</p>
+          <ImageGallery urls={allImageUrls} title="Fotos del relevamiento" badge="★ CORE" />
         </section>
       )}
 
