@@ -190,7 +190,7 @@ export const COL = {
   establecimiento: [/establecimiento/i, /escuela/i, /local/i],
   circuito: [/\bcod_?circ\b/i, /circuito/i, /circ/i],
   lat: [/\blat(itud)?\b/i, /\by\b/],
-  lon: [/\blon(gitud)?\b/i, /\blng\b/i, /\bx\b/],
+  lon: [/\bLOGITUD\b/i, /\blon(gitud)?\b/i, /\blng\b/i, /\bx\b/],
   profesion: [/profesi[oó]n/i, /\bprof\b/i, /ocupaci[oó]n/i],
   fuerza: [/fuerza/i, /partido/i, /espacio/i],
   referente: [/referente/i, /contacto/i],
@@ -243,10 +243,28 @@ export const COL = {
   participacion: [/participaci[oó]n/i, /concurrencia/i, /\bvotaron\b/i],
 
   // Padrón enriquecido — contactabilidad
-  celular: [/celular/i, /\bcel\b/i, /tel[eé]fono/i, /\btel\b/i, /\bphone\b/i, /m[oó]vil/i, /whatsapp/i, /\bwp\b/i],
-  email: [/\bemail\b/i, /\bcorreo\b/i, /e-mail/i, /correo.*elect/i],
-  redesSociales: [/red.*social/i, /social.*red/i, /facebook/i, /instagram/i, /twitter/i, /tiktok/i, /\bredes\b/i, /\bfb\b/i, /\big\b/i],
+  celular: [/MAIPU_celular/i, /celular/i, /\bcel\b/i, /tel[eé]fono/i, /\btel\b/i, /\bphone\b/i, /m[oó]vil/i, /whatsapp/i, /\bwp\b/i],
+  email: [/MAIPU_email/i, /\bemail\b/i, /\bcorreo\b/i, /e-mail/i, /correo.*elect/i],
+  redesSociales: [/MAIPU_twitter/i, /red.*social/i, /social.*red/i, /facebook/i, /instagram/i, /twitter/i, /tiktok/i, /\bredes\b/i, /\bfb\b/i, /\big\b/i],
   domicilio: [/\bdomicilio\b/i, /\bdirecci[oó]n\b/i, /\bcalle\b/i, /\bdir\b/i],
+
+  // Padrón enriquecido — campos adicionales
+  domicilioReal: [/domicilio\s*real/i, /direcci[oó]n\s*real/i],
+  localidad: [/\blocalidad\b/i, /\bpoblaci[oó]n\b/i],
+  auh: [/beneficiario.*AUH/i, /\bAUH\b/i],
+  ife: [/beneficiario.*IFE/i, /\bIFE\b/i],
+  regimenImpositivo: [/r[eé]gimen.*impos/i, /impos.*r[eé]gimen/i, /monotributo/i],
+
+  // Participación electoral inline en padrón (multi-elección)
+  votoSep25: [/2025\s*septiembre/i, /septiembre\s*2025/i],
+  votoOct25: [/2025\s*octubre/i, /octubre\s*2025/i],
+  votoPaso23: [/2023\s*paso/i, /paso\s*2023/i],
+  votoGen23: [/2023\s*generales/i, /generales\s*2023/i],
+  votoBal23: [/2023\s*balotaje/i, /balotaje/i],
+  votoPaso21: [/2021\s*paso/i, /paso\s*2021/i],
+  votoGen21: [/2021\s*generales/i, /generales\s*2021/i],
+  votoPaso19: [/2019\s*paso/i, /paso\s*2019/i],
+  votoGen19: [/2019\s*generales/i, /generales\s*2019/i],
 
   // Padrón enriquecido — perfil sociopolítico
   estadoCivil: [/estado.*civil/i, /civil\b/i, /estado_civil/i, /\bcasad[ao]\b/i, /\bsolter[ao]\b/i],
@@ -254,5 +272,29 @@ export const COL = {
   afiliacion: [/afiliaci[oó]n/i, /\bafili[ao]\b/i, /\bmilitante\b/i, /partido.*afil/i, /afil.*partido/i, /\bpartido_pol/i],
   observaciones: [/observaci[oó]n/i, /\bnota\b/i, /\bcomentario\b/i, /\bobs\b/i],
   voto: [/\bvot[oó]\b/i, /\bvoto\b/i, /\bparticip/i, /\basisti[oó]\b/i, /\bconcurri[oó]\b/i, /\bsufrag/i, /\bemiti[oó]\b/i, /estado.*vot/i, /vot.*estado/i, /si.*vot/i, /no.*vot/i],
+}
+
+/** Normalize "VOTÓ" / "NO VOTÓ" / "SIN DATO" to boolean | null */
+export function normalizaParticipacion(v: string | number | null | undefined): boolean | null {
+  if (v === null || v === undefined) return null
+  const s = String(v).trim().toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+  if (s === "VOTO" || s === "SI" || s === "1" || s === "TRUE") return true
+  if (s === "NO VOTO" || s === "NO" || s === "0" || s === "FALSE") return false
+  return null  // "SIN DATO" and others
+}
+
+/** Count voters by participation in a given election column */
+export function electionStats(
+  rows: Row[],
+  colIdx: number
+): { voted: number; notVoted: number; sinDato: number; total: number } {
+  let voted = 0, notVoted = 0, sinDato = 0
+  for (const row of rows) {
+    const r = normalizaParticipacion(row[colIdx])
+    if (r === true) voted++
+    else if (r === false) notVoted++
+    else sinDato++
+  }
+  return { voted, notVoted, sinDato, total: rows.length }
 }
 
