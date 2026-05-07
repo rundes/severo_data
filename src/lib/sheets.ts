@@ -28,7 +28,11 @@ export async function fetchSheetData(
       const cell = row[i]
       if (cell === undefined || cell === "") return null
       // Handle Argentine number format (1.234,56 → 1234.56)
-      const normalized = cell.replace(/\./g, "").replace(",", ".")
+      // Only strip thousand-separator dots when a comma is also present;
+      // plain decimal values like "-34.6201" must NOT have their dot removed.
+      const normalized = cell.includes(",")
+        ? cell.replace(/\./g, "").replace(",", ".")
+        : cell
       const num = Number(normalized)
       return isNaN(num) ? cell : num
     })

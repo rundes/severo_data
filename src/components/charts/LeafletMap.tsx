@@ -120,6 +120,8 @@ export default function LeafletMap({
       // Fit the map view to all visible points
       const bounds = L.latLngBounds(points.map((p: Point) => [p.y, p.x]))
       map.fitBounds(bounds, { padding: [30, 30] })
+      // Ensure the container is properly sized after any layout reflow
+      setTimeout(() => { if (!cancelled) map.invalidateSize() }, 200)
     })
 
     return () => {
@@ -140,6 +142,8 @@ export default function LeafletMap({
     )
   }
 
+  const validCount = data.filter(p => p.x !== 0 && p.y !== 0 && !isNaN(p.x) && !isNaN(p.y)).length
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       {/* Header */}
@@ -147,6 +151,7 @@ export default function LeafletMap({
         <div>
           <p className="text-sm font-semibold text-gray-800">{title}</p>
           {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+          <p className="text-xs text-gray-400 mt-0.5">{validCount.toLocaleString("es-AR")} puntos</p>
         </div>
         {badge && (
           <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">
