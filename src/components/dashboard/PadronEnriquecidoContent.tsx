@@ -105,7 +105,16 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
     fetchSheetTabs(sheetId, accessToken)
       .then(tabs => {
         setSheetTabs(tabs)
-        if (tabs.length > 0 && !activeSheetTab) setActiveSheetTab(tabs[0].title)
+        if (tabs.length > 0 && !activeSheetTab) {
+          // Prefer a tab that looks like the enriched padron (not voto/historial)
+          const best =
+            tabs.find(t => /padron.enriquecido/i.test(t.title)) ??
+            tabs.find(t => /enriquecido/i.test(t.title)) ??
+            tabs.find(t => /padr[oó]n/i.test(t.title) && !/voto|historial/i.test(t.title)) ??
+            tabs.find(t => !/voto|historial/i.test(t.title)) ??
+            tabs[0]
+          setActiveSheetTab(best.title)
+        }
       })
       .catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -116,7 +125,16 @@ export default function PadronEnriquecidoContent({ sheetId, votoSheetId }: Props
     fetchSheetTabs(votoSheetId, accessToken)
       .then(tabs => {
         setVotoSheetTabs(tabs)
-        if (tabs.length > 0 && !activeVotoTab) setActiveVotoTab(tabs[0].title)
+        if (tabs.length > 0 && !activeVotoTab) {
+          // Prefer a tab that looks like vote history
+          const best =
+            tabs.find(t => /historial.*voto|voto.*historial/i.test(t.title)) ??
+            tabs.find(t => /\bvoto\b/i.test(t.title)) ??
+            tabs.find(t => /historial/i.test(t.title)) ??
+            tabs.find(t => /participac/i.test(t.title)) ??
+            tabs[tabs.length - 1]
+          setActiveVotoTab(best.title)
+        }
       })
       .catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
