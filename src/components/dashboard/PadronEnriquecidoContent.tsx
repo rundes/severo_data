@@ -13,7 +13,7 @@ import {
   type SegCols, type SegmentacionResult, type IndicesResult, type ColCompletitud, type Segmento,
 } from "@/lib/dataUtils"
 import { normalizaParticipacion, electionStats } from "@/lib/columnMatcher"
-import { filterByBarrio } from "@/lib/barriosGeo"
+import { filterByBarrio, BARRIOS } from "@/lib/barriosGeo"
 import BarrioFilter from "@/components/ui/BarrioFilter"
 import KPICard from "@/components/charts/KPICard"
 import PieChartComponent from "@/components/charts/PieChartComponent"
@@ -523,6 +523,37 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       }
     })
 
+    // ── Per-barrio comparativa ────────────────────────────────────────────────
+    // For each KMZ barrio, compute key metrics as percentages
+    const barrioComparativa = BARRIOS.map(b => {
+      const bRows = filterByBarrio(rows, b.name, cols.lat, cols.lon, cols.barrio)
+      const bTotal = bRows.length
+      if (bTotal === 0) return null
+
+      const oct25Known = cols.votoOct25 >= 0 ? bRows.filter(r => normalizaVoto(r[cols.votoOct25]) !== null).length : 0
+      const oct25SI   = cols.votoOct25 >= 0 ? bRows.filter(r => normalizaVoto(r[cols.votoOct25]) === true).length  : 0
+      const sep25Known = cols.votoSep25 >= 0 ? bRows.filter(r => normalizaVoto(r[cols.votoSep25]) !== null).length : 0
+      const sep25SI   = cols.votoSep25 >= 0 ? bRows.filter(r => normalizaVoto(r[cols.votoSep25]) === true).length  : 0
+
+      const cntContact = bRows.filter(r =>
+        (cols.celular >= 0 && hasContactValue(r[cols.celular])) ||
+        (cols.email   >= 0 && hasContactValue(r[cols.email]))
+      ).length
+      const cntNucleo = bRows.filter(r => segmentar(r, segCols) === "nucleoDuro").length
+
+      return {
+        name:          b.name,
+        shortName:     b.name.replace(/^Barrio\s+/i, ""),
+        total:         bTotal,
+        pctElectores:  pct(bTotal, total),
+        pctOct25:      oct25Known > 0 ? Math.round(oct25SI / oct25Known * 100) : null,
+        pctSep25:      sep25Known > 0 ? Math.round(sep25SI / sep25Known * 100) : null,
+        pctContacto:   pct(cntContact, bTotal),
+        pctNucleo:     pct(cntNucleo, bTotal),
+      }
+    }).filter((b): b is NonNullable<typeof b> => b !== null)
+      .sort((a, b) => b.total - a.total)
+
     return {
       total, ages, avgAge, totalF, totalM,
       cntCelular, cntEmail, cntRedes, cntAnyContact, cntEnriched,
@@ -542,7 +573,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       cruceSeg, fidelidadNucleo, abstencionRecuperable, cruceEdad, cruceSexo, mesaParticipacion,
       geoRows: geoRows.length,
       mapPointsElectores, mapPointsParticipacion, mapPointsAbstencion, mapPointsContacto,
-      SEG_COLORS,
+      SEG_COLORS, barrioComparativa,
     }
   }, [displayRows, headers, cols, segCols])
 
@@ -832,6 +863,181 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 title="% que votó por mesa"
                 badge="● QUICK WIN"
               />
+            </section>
+          )}
+
+          {/* ── Comparativa por barrio ─────────────────────────────────────── */}
+          {a.barrioComparativa.length > 0 && (
+            <section>
+              <p className="text-xs font-semibold text-purple-700 uppercase tracking-wider mb-3">⊞ Comparativa por barrio — métricas en %</p>
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-5 pt-4 pb-3 border-b border-gray-50 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">Performance por barrio</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Cada métrica expresada en % · ordenado por cantidad de electores</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">⊞ TERRITORIO</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-gray-50 text-left">
+                        <th className="px-4 py-3 text-gray-500 font-medium">Barrio</th>
+                        <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">Electores</th>
+                        {a.barrioComparativa.some(b => b.pctOct25 !== null) && (
+                          <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">Oct&nbsp;2025</th>
+                        )}
+                        {a.barrioComparativa.some(b => b.pctSep25 !== null) && (
+                          <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">Sep&nbsp;2025</th>
+                        )}
+                        {a.barrioComparativa.some(b => b.pctOct25 !== null && b.pctSep25 !== null) && (
+                          <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">Δ&nbsp;Oct-Sep</th>
+                        )}
+                        <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">Contacto</th>
+                        <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">Núcleo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {a.barrioComparativa.map((b) => {
+                        const maxElec = Math.max(...a.barrioComparativa.map(x => x.pctElectores))
+                        const delta = (b.pctOct25 !== null && b.pctSep25 !== null) ? b.pctOct25 - b.pctSep25 : null
+
+                        const partColor = (v: number | null) => {
+                          if (v === null) return "bg-gray-200"
+                          if (v >= 70) return "bg-green-500"
+                          if (v >= 55) return "bg-amber-400"
+                          return "bg-red-400"
+                        }
+                        const partText = (v: number | null) => {
+                          if (v === null) return "text-gray-400"
+                          if (v >= 70) return "text-green-700"
+                          if (v >= 55) return "text-amber-700"
+                          return "text-red-600"
+                        }
+
+                        return (
+                          <tr key={b.name} className="hover:bg-slate-50/60 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-gray-800">{b.shortName}</td>
+
+                            {/* Electores */}
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2 justify-end">
+                                <span className="text-gray-600 tabular-nums">{b.pctElectores}%</span>
+                                <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full bg-sky-500 rounded-full" style={{ width: `${(b.pctElectores / maxElec) * 100}%` }} />
+                                </div>
+                              </div>
+                              <p className="text-gray-400 text-right tabular-nums mt-0.5">{b.total.toLocaleString("es-AR")}</p>
+                            </td>
+
+                            {/* Oct 2025 */}
+                            {a.barrioComparativa.some(x => x.pctOct25 !== null) && (
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2 justify-end">
+                                  <span className={`font-bold tabular-nums ${partText(b.pctOct25)}`}>
+                                    {b.pctOct25 !== null ? `${b.pctOct25}%` : "—"}
+                                  </span>
+                                  <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className={`h-full rounded-full ${partColor(b.pctOct25)}`}
+                                      style={{ width: `${b.pctOct25 ?? 0}%` }} />
+                                  </div>
+                                </div>
+                              </td>
+                            )}
+
+                            {/* Sep 2025 */}
+                            {a.barrioComparativa.some(x => x.pctSep25 !== null) && (
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2 justify-end">
+                                  <span className={`font-bold tabular-nums ${partText(b.pctSep25)}`}>
+                                    {b.pctSep25 !== null ? `${b.pctSep25}%` : "—"}
+                                  </span>
+                                  <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className={`h-full rounded-full ${partColor(b.pctSep25)}`}
+                                      style={{ width: `${b.pctSep25 ?? 0}%` }} />
+                                  </div>
+                                </div>
+                              </td>
+                            )}
+
+                            {/* Δ Oct-Sep */}
+                            {a.barrioComparativa.some(x => x.pctOct25 !== null && x.pctSep25 !== null) && (
+                              <td className="px-4 py-3 text-right tabular-nums font-semibold">
+                                {delta !== null ? (
+                                  <span className={delta > 0 ? "text-green-600" : delta < 0 ? "text-red-500" : "text-gray-400"}>
+                                    {delta > 0 ? "+" : ""}{delta}pp
+                                  </span>
+                                ) : <span className="text-gray-300">—</span>}
+                              </td>
+                            )}
+
+                            {/* Contacto */}
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2 justify-end">
+                                <span className="text-sky-700 font-semibold tabular-nums">{b.pctContacto}%</span>
+                                <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full bg-sky-400 rounded-full" style={{ width: `${b.pctContacto}%` }} />
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Núcleo duro */}
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2 justify-end">
+                                <span className="text-[#1e3a5f] font-semibold tabular-nums">{b.pctNucleo}%</span>
+                                <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full bg-[#1e3a5f] rounded-full" style={{ width: `${b.pctNucleo}%` }} />
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                    {/* Totals row */}
+                    <tfoot>
+                      <tr className="bg-gray-50 border-t-2 border-gray-200 font-semibold">
+                        <td className="px-4 py-3 text-gray-700">Total / Promedio</td>
+                        <td className="px-4 py-3 text-right text-gray-600 tabular-nums">
+                          {a.barrioComparativa.reduce((s, b) => s + b.pctElectores, 0)}%
+                          <p className="text-gray-400 font-normal tabular-nums">{a.barrioComparativa.reduce((s, b) => s + b.total, 0).toLocaleString("es-AR")}</p>
+                        </td>
+                        {a.barrioComparativa.some(b => b.pctOct25 !== null) && (
+                          <td className="px-4 py-3 text-right text-gray-600 tabular-nums">
+                            {(() => {
+                              const vals = a.barrioComparativa.filter(b => b.pctOct25 !== null).map(b => b.pctOct25!)
+                              return vals.length ? `${Math.round(vals.reduce((s, v) => s + v, 0) / vals.length)}%` : "—"
+                            })()}
+                          </td>
+                        )}
+                        {a.barrioComparativa.some(b => b.pctSep25 !== null) && (
+                          <td className="px-4 py-3 text-right text-gray-600 tabular-nums">
+                            {(() => {
+                              const vals = a.barrioComparativa.filter(b => b.pctSep25 !== null).map(b => b.pctSep25!)
+                              return vals.length ? `${Math.round(vals.reduce((s, v) => s + v, 0) / vals.length)}%` : "—"
+                            })()}
+                          </td>
+                        )}
+                        {a.barrioComparativa.some(b => b.pctOct25 !== null && b.pctSep25 !== null) && (
+                          <td className="px-4 py-3" />
+                        )}
+                        <td className="px-4 py-3 text-right text-sky-700 tabular-nums">
+                          {Math.round(a.barrioComparativa.reduce((s, b) => s + b.pctContacto, 0) / a.barrioComparativa.length)}%
+                        </td>
+                        <td className="px-4 py-3 text-right text-[#1e3a5f] tabular-nums">
+                          {Math.round(a.barrioComparativa.reduce((s, b) => s + b.pctNucleo, 0) / a.barrioComparativa.length)}%
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <div className="px-5 py-3 border-t border-gray-50 flex flex-wrap gap-4 text-[10px] text-gray-400">
+                  <span><span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1"></span>≥ 70% excelente</span>
+                  <span><span className="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1"></span>55–69% aceptable</span>
+                  <span><span className="inline-block w-2 h-2 rounded-full bg-red-400 mr-1"></span>&lt; 55% crítico</span>
+                  <span className="ml-auto">Solo barrios con electores georreferenciados</span>
+                </div>
+              </div>
             </section>
           )}
         </div>
