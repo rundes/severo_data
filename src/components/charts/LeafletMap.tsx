@@ -25,7 +25,6 @@ const DEFAULT_COLORS = [
   "#8b5cf6", "#ec4899", "#14b8a6",
 ]
 
-// Resolve the GeoJSON path accounting for the GitHub Pages basePath
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? ""
 const BARRIOS_GEOJSON = `${BASE}/barrios-maipu.geojson`
 
@@ -35,7 +34,6 @@ async function addBarriosLayer(L: any, map: any): Promise<void> {
     const res = await fetch(BARRIOS_GEOJSON)
     if (!res.ok) return
     const geojson = await res.json()
-
     L.geoJSON(geojson, {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       filter: (feature: any) => feature.geometry?.type === "Polygon",
@@ -50,17 +48,23 @@ async function addBarriosLayer(L: any, map: any): Promise<void> {
       onEachFeature: (feature: any, layer: any) => {
         const name = feature.properties?.name ?? ""
         if (name) {
-          layer.bindTooltip(name, {
-            permanent: false,
-            direction: "center",
-            className: "barrio-label",
-          })
+          layer.bindTooltip(name, { permanent: false, direction: "center", className: "barrio-label" })
           layer.bindPopup(`<strong>${name}</strong>`)
         }
       },
     }).addTo(map)
   } catch {
-    // silently skip if file not found (e.g., dev without basePath)
+    // silently skip if file not found
+  }
+}
+
+function injectCSS(id: string, href: string) {
+  if (typeof document !== "undefined" && !document.getElementById(id)) {
+    const link = document.createElement("link")
+    link.id = id
+    link.rel = "stylesheet"
+    link.href = href
+    document.head.appendChild(link)
   }
 }
 
@@ -89,7 +93,6 @@ export default function LeafletMap({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const L: any = Lmod.default ?? Lmod
 
-      // Fix default icon paths broken by webpack
       delete L.Icon.Default.prototype._getIconUrl
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -97,20 +100,16 @@ export default function LeafletMap({
         shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       })
 
-      // Destroy any existing map instance on this div
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null
       }
 
-      // Filter valid coordinate points
       const points = data.filter(
         (p) => p.x !== 0 && p.y !== 0 && !isNaN(p.x) && !isNaN(p.y)
       )
       if (!points.length) return
 
-      // preferCanvas: true — one <canvas> for all path layers instead of
-      // one SVG node per marker; handles 10 000+ points without freezing.
       const map = L.map(mapRef.current!, { zoomControl: true, preferCanvas: true })
       mapInstanceRef.current = map
 
@@ -119,60 +118,82 @@ export default function LeafletMap({
         maxZoom: 18,
       }).addTo(map)
 
-      // Barrio boundary layer (loaded from static GeoJSON)
       if (showBarrios) {
         await addBarriosLayer(L, map)
         if (cancelled) return
       }
 
       if (mode === "heat") {
-        // leaflet.heat adds itself to the global L object
         await import("leaflet.heat")
         const heatPoints = points.map((p) => [p.y, p.x, 1.0])
         L.heatLayer(heatPoints, {
           radius: 20,
           blur: 15,
           maxZoom: 17,
-          gradient: {
-            0.2: "#3b82f6",
-            0.4: "#10b981",
-            0.6: "#f59e0b",
-            0.8: "#ef4444",
-            1.0: "#7c2d12",
-          },
+          gradient: { 0.2: "#3b82f6", 0.4: "#10b981", 0.6: "#f59e0b", 0.8: "#ef4444", 1.0: "#7c2d12" },
         }).addTo(map)
       } else {
-        // Build color map from unique colorKeys
+        // Clustered scatter — groups nearby points into colour-coded circles,
+        // expanding into individual markers as the user zooms in.
+        await import("leaflet.markercluster")
+        injectCSS("mc-css", "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css")
+        injectCSS("mc-def-css", "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css")
+
         const colorKeys = [...new Set(points.map((p) => p.colorKey ?? "default"))]
         const autoColorMap: Record<string, string> = {}
         colorKeys.forEach((k, i) => {
           autoColorMap[k] = colorMap?.[k] ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length]
         })
 
-        // Shared popup reused across all markers (avoids binding 8 000 popups)
-        const popup = L.popup({ closeButton: false, className: "leaflet-map-popup" })
-
-        const subset = points.length > 8000 ? points.slice(0, 8000) : points
-        subset.forEach((p) => {
-          const color = autoColorMap[p.colorKey ?? "default"] ?? "#0ea5e9"
-          const marker = L.circleMarker([p.y, p.x], {
-            radius: 4,
-            fillColor: color,
-            color: color,
-            weight: 0,
-            fillOpacity: 0.75,
+        // One MarkerClusterGroup per colorKey so each colour stays separate
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const groups: Record<string, any> = {}
+        colorKeys.forEach((k) => {
+          const color = autoColorMap[k]
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          groups[k] = (L as any).markerClusterGroup({
+            maxClusterRadius: 50,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true,
+            spiderfyOnMaxZoom: true,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            iconCreateFunction: (cluster: any) => {
+              const count = cluster.getChildCount()
+              const size = count < 10 ? 28 : count < 100 ? 36 : 44
+              return L.divIcon({
+                html: `<div style="
+                  width:${size}px;height:${size}px;border-radius:50%;
+                  background:${color};opacity:0.85;
+                  display:flex;align-items:center;justify-content:center;
+                  color:#fff;font-size:11px;font-weight:700;
+                  box-shadow:0 1px 5px rgba(0,0,0,.35);">${count}</div>`,
+                className: "",
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2],
+              })
+            },
           })
-          if (p.label) {
-            marker.on("click", (e: unknown) => {
-              popup.setLatLng((e as { latlng: unknown }).latlng)
-                   .setContent(String(p.label))
-                   .openOn(map)
-            })
-          }
-          marker.addTo(map)
         })
 
-        // Inline legend for color keys
+        points.forEach((p) => {
+          const key = p.colorKey ?? "default"
+          const color = autoColorMap[key] ?? "#0ea5e9"
+          const marker = L.circleMarker([p.y, p.x], {
+            radius: 5,
+            fillColor: color,
+            color: "#fff",
+            weight: 1,
+            fillOpacity: 0.85,
+          })
+          if (p.label) {
+            marker.bindPopup(String(p.label), { closeButton: false, className: "leaflet-map-popup" })
+          }
+          groups[key].addLayer(marker)
+        })
+
+        colorKeys.forEach((k) => map.addLayer(groups[k]))
+
+        // Legend
         if (colorKeys.length > 1) {
           const legendItems = colorKeys
             .map(k => `<div style="display:flex;align-items:center;gap:5px;margin:2px 0">
@@ -190,10 +211,8 @@ export default function LeafletMap({
         }
       }
 
-      // Fit the map view to all visible points
       const bounds = L.latLngBounds(points.map((p: Point) => [p.y, p.x]))
       map.fitBounds(bounds, { padding: [30, 30] })
-      // Ensure the container is properly sized after any layout reflow
       setTimeout(() => { if (!cancelled) map.invalidateSize() }, 200)
     })
 
@@ -219,7 +238,6 @@ export default function LeafletMap({
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* Header */}
       <div className="px-5 pt-4 pb-2 flex items-start justify-between">
         <div>
           <p className="text-sm font-semibold text-gray-800">{title}</p>
@@ -232,7 +250,6 @@ export default function LeafletMap({
           </span>
         )}
       </div>
-      {/* Map container — must have a fixed height for Leaflet to render */}
       <div ref={mapRef} style={{ height }} className="w-full" />
     </div>
   )
