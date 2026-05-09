@@ -147,21 +147,50 @@ export default function LeafletMap({
           autoColorMap[k] = colorMap?.[k] ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length]
         })
 
-        // Limit to 5000 points to keep the browser responsive
-        const subset = points.length > 5000 ? points.slice(0, 5000) : points
+        // Canvas renderer — one <canvas> element instead of one SVG node per marker.
+        // This handles 10 000+ points without freezing the browser.
+        const renderer = L.canvas({ padding: 0.5 })
+
+        // Shared popup reused across all markers (avoids binding 5 000 popups)
+        const popup = L.popup({ closeButton: false, className: "leaflet-map-popup" })
+
+        const subset = points.length > 8000 ? points.slice(0, 8000) : points
         subset.forEach((p) => {
           const color = autoColorMap[p.colorKey ?? "default"] ?? "#0ea5e9"
-          L.circleMarker([p.y, p.x], {
-            radius: 5,
+          const marker = L.circleMarker([p.y, p.x], {
+            renderer,
+            radius: 4,
             fillColor: color,
-            color: "#fff",
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.85,
+            color: color,
+            weight: 0,
+            fillOpacity: 0.75,
           })
-            .bindPopup(p.label ?? "")
-            .addTo(map)
+          if (p.label) {
+            marker.on("click", (e: unknown) => {
+              popup.setLatLng((e as { latlng: unknown }).latlng)
+                   .setContent(String(p.label))
+                   .openOn(map)
+            })
+          }
+          marker.addTo(map)
         })
+
+        // Inline legend for color keys
+        if (colorKeys.length > 1) {
+          const legendItems = colorKeys
+            .map(k => `<div style="display:flex;align-items:center;gap:5px;margin:2px 0">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${autoColorMap[k]};flex-shrink:0"></span>
+              <span>${k}</span></div>`)
+            .join("")
+          const LegendControl = L.Control.extend({
+            onAdd: () => {
+              const div = L.DomUtil.create("div")
+              div.innerHTML = `<div style="background:rgba(255,255,255,0.92);padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.4;box-shadow:0 1px 5px rgba(0,0,0,.2);max-width:180px">${legendItems}</div>`
+              return div
+            },
+          })
+          new LegendControl({ position: "bottomright" }).addTo(map)
+        }
       }
 
       // Fit the map view to all visible points
