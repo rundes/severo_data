@@ -109,7 +109,9 @@ export default function LeafletMap({
       )
       if (!points.length) return
 
-      const map = L.map(mapRef.current!, { zoomControl: true })
+      // preferCanvas: true — one <canvas> for all path layers instead of
+      // one SVG node per marker; handles 10 000+ points without freezing.
+      const map = L.map(mapRef.current!, { zoomControl: true, preferCanvas: true })
       mapInstanceRef.current = map
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -147,18 +149,13 @@ export default function LeafletMap({
           autoColorMap[k] = colorMap?.[k] ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length]
         })
 
-        // Canvas renderer — one <canvas> element instead of one SVG node per marker.
-        // This handles 10 000+ points without freezing the browser.
-        const renderer = L.canvas({ padding: 0.5 })
-
-        // Shared popup reused across all markers (avoids binding 5 000 popups)
+        // Shared popup reused across all markers (avoids binding 8 000 popups)
         const popup = L.popup({ closeButton: false, className: "leaflet-map-popup" })
 
         const subset = points.length > 8000 ? points.slice(0, 8000) : points
         subset.forEach((p) => {
           const color = autoColorMap[p.colorKey ?? "default"] ?? "#0ea5e9"
           const marker = L.circleMarker([p.y, p.x], {
-            renderer,
             radius: 4,
             fillColor: color,
             color: color,
