@@ -96,7 +96,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
   const [filterSexo, setFilterSexo] = useState<string>("")
   const [filterSegmento, setFilterSegmento] = useState<string>("")
   const [filterBarrio, setFilterBarrio] = useState<string>("")
-  const [mapMode, setMapMode] = useState<"electores" | "participacion" | "abstención" | "contactabilidad">("electores")
+  const [mapMode, setMapMode] = useState<"electores" | "participacion" | "abstención" | "contactabilidad" | "familias">("electores")
 
   // Fetch available sheet tabs for both sheets
   useEffect(() => {
@@ -655,6 +655,41 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
     }).filter((b): b is NonNullable<typeof b> => b !== null)
       .sort((a, b) => b.total - a.total)
 
+    // ── Grupos familiares: domicilios con acumulación inusual de electores ────
+    const mapPointsFamilias: { x: number; y: number; size: number; label: string; colorKey: string }[] = []
+    let familiaThreshold = 3
+    if (cols.lat >= 0 && cols.lon >= 0 && geoRows.length > 0) {
+      const coordMap = new Map<string, { x: number; y: number; count: number; apellidos: string[] }>()
+      for (const r of geoRows) {
+        const x = Math.round(Number(r[cols.lon]) * 10000) / 10000
+        const y = Math.round(Number(r[cols.lat]) * 10000) / 10000
+        const key = `${y},${x}`
+        if (!coordMap.has(key)) coordMap.set(key, { x, y, count: 0, apellidos: [] })
+        const entry = coordMap.get(key)!
+        entry.count++
+        if (entry.apellidos.length < 4 && cols.apellido >= 0) {
+          const ap = String(r[cols.apellido] ?? "").trim()
+          if (ap && !entry.apellidos.includes(ap)) entry.apellidos.push(ap)
+        }
+      }
+      const counts = [...coordMap.values()].map(g => g.count)
+      const mean = counts.reduce((s, c) => s + c, 0) / counts.length
+      const std = Math.sqrt(counts.reduce((s, c) => s + (c - mean) ** 2, 0) / counts.length)
+      familiaThreshold = Math.max(3, Math.round(mean + 1.5 * std))
+
+      for (const g of coordMap.values()) {
+        if (g.count < familiaThreshold) continue
+        const nivel = g.count >= familiaThreshold * 2 ? "Muy alto" : "Alto"
+        const aps = g.apellidos.length ? ` · ${g.apellidos.join(", ")}` : ""
+        mapPointsFamilias.push({
+          x: g.x, y: g.y, size: g.count,
+          label: `<strong>${g.count} electores</strong> en este domicilio${aps}<br/><small>Umbral normal: &lt;${familiaThreshold}</small>`,
+          colorKey: nivel,
+        })
+      }
+      mapPointsFamilias.sort((a, b) => b.size - a.size)
+    }
+
     return {
       total, ages, avgAge, totalF, totalM,
       cntCelular, cntEmail, cntRedes, cntAnyContact, cntEnriched,
@@ -681,6 +716,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       geoRows: geoRows.length,
       mapPointsElectores, mapPointsParticipacion, mapPointsAbstencion, mapPointsContacto,
       SEG_COLORS, barrioComparativa,
+      mapPointsFamilias, familiaThreshold,
     }
   }, [displayRows, headers, cols, segCols, celularAllCols, emailAllCols, redesAllCols])
 
@@ -2089,12 +2125,12 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                     <p className="text-xs text-gray-400 mt-0.5">{a.geoRows.toLocaleString("es-AR")} de {a.total.toLocaleString("es-AR")} electores tienen coordenadas ({pct(a.geoRows, a.total)}%)</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {(["electores", "participacion", "abstención", "contactabilidad"] as const).map(m => (
+                    {(["electores", "participacion", "abstención", "contactabilidad", "familias"] as const).map(m => (
                       <button
                         key={m}
                         onClick={() => setMapMode(m)}
                         disabled={m === "participacion" && cols.voto < 0}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all capitalize disabled:opacity-30 disabled:cursor-not-allowed ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
                           mapMode === m
                             ? "bg-[#1e3a5f] text-white shadow"
                             : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -2103,6 +2139,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                         {m === "electores" ? "Segmentos" :
                          m === "participacion" ? "Participación" :
                          m === "abstención" ? "Abstención" :
+                         m === "familias" ? "Grupos familiares" :
                          "Contactabilidad"}
                       </button>
                     ))}
@@ -2207,6 +2244,100 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                       badge="● QUICK WIN"
                       mode="heat"
                     />
+                  </div>
+                )}
+
+                {mapMode === "familias" && (
+                  <div className="space-y-4">
+                    {a.mapPointsFamilias.length > 0 ? (
+                      <>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-2">
+                          <KPICard
+                            title="Domicilios destacados"
+                            value={a.mapPointsFamilias.length}
+                            color="#ef4444"
+                            subtitle={`≥${a.familiaThreshold} electores por punto`}
+                          />
+                          <KPICard
+                            title="Mayor concentración"
+                            value={`${a.mapPointsFamilias[0]?.size ?? 0} electores`}
+                            color="#dc2626"
+                            subtitle="en un solo domicilio"
+                          />
+                          <KPICard
+                            title="Umbral estadístico"
+                            value={`≥${a.familiaThreshold}`}
+                            color="#f59e0b"
+                            subtitle="media + 1,5σ de la distribución"
+                          />
+                          <KPICard
+                            title="Electores en grupos"
+                            value={a.mapPointsFamilias.reduce((s, p) => s + p.size, 0).toLocaleString("es-AR")}
+                            color="#8b5cf6"
+                            subtitle={`${pct(a.mapPointsFamilias.reduce((s, p) => s + p.size, 0), a.total)}% del padrón`}
+                          />
+                        </div>
+                        <LeafletMap
+                          data={a.mapPointsFamilias}
+                          title="Grupos familiares destacados — acumulación inusual por domicilio"
+                          subtitle={`Domicilios con ${a.familiaThreshold}+ electores (media + 1,5σ). Tamaño del círculo proporcional a la cantidad.`}
+                          badge="★ CORE"
+                          colorMap={{ "Muy alto": "#dc2626", "Alto": "#f59e0b" }}
+                          mode="bubble"
+                          height={500}
+                        />
+                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                          <div className="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
+                            <p className="text-sm font-semibold text-gray-800">Top domicilios por cantidad de electores</p>
+                            <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">★ CORE</span>
+                          </div>
+                          <div className="overflow-x-auto max-h-72">
+                            <table className="w-full text-xs">
+                              <thead className="sticky top-0 bg-gray-50 text-gray-500 uppercase tracking-wider">
+                                <tr>
+                                  <th className="text-left px-4 py-2.5">#</th>
+                                  <th className="text-right px-4 py-2.5">Electores</th>
+                                  <th className="text-left px-4 py-2.5">Apellidos</th>
+                                  <th className="text-right px-4 py-2.5">Nivel</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-50">
+                                {a.mapPointsFamilias.slice(0, 30).map((p, i) => (
+                                  <tr key={i} className={i < 3 ? "bg-red-50/40" : ""}>
+                                    <td className="px-4 py-2 text-gray-400 font-mono">{i + 1}</td>
+                                    <td className="px-4 py-2 text-right font-bold text-red-600">{p.size}</td>
+                                    <td className="px-4 py-2 text-gray-600" dangerouslySetInnerHTML={{ __html: p.label.replace(/<[^>]+>/g, " ").trim() }} />
+                                    <td className="px-4 py-2 text-right">
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.colorKey === "Muy alto" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                                        {p.colorKey}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <ExportBtn
+                            label="Exportar grupos familiares CSV"
+                            icon="⬇"
+                            onClick={() => exportCSV(
+                              ["#", "Latitud", "Longitud", "Electores", "Nivel"],
+                              a.mapPointsFamilias.map((p, i) => [i + 1, p.y, p.x, p.size, p.colorKey]),
+                              "grupos_familiares_destacados.csv"
+                            )}
+                            color="purple"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="bg-gray-50 rounded-2xl p-8 text-center text-sm text-gray-400">
+                        {cols.lat < 0 || cols.lon < 0
+                          ? "El padrón no tiene coordenadas geográficas."
+                          : "No se detectaron grupos familiares inusuales con los filtros actuales."}
+                      </div>
+                    )}
                   </div>
                 )}
 
