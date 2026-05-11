@@ -49,6 +49,14 @@ export function findCol(headers: string[], patterns: RegExp[]): number {
   return -1
 }
 
+/** Returns ALL column indices whose header matches any of the given patterns */
+export function findAllCols(headers: string[], patterns: RegExp[]): number[] {
+  return headers.reduce<number[]>((acc, h, i) => {
+    if (patterns.some(p => p.test(h.trim()))) acc.push(i)
+    return acc
+  }, [])
+}
+
 /** Count occurrences of each value in a column */
 export function valueCounts(
   rows: Row[],
@@ -297,4 +305,3 @@ export function electionStats(
   }
   return { voted, notVoted, sinDato, total: rows.length }
 }
-
