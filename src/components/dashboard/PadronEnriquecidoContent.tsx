@@ -655,21 +655,32 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
     }).filter((b): b is NonNullable<typeof b> => b !== null)
       .sort((a, b) => b.total - a.total)
 
-    // ── Grupos familiares: domicilios con acumulación inusual de electores ────
-    const mapPointsFamilias: { x: number; y: number; size: number; label: string; colorKey: string }[] = []
+    // ── Grupos por coordenada: distingue "punto de geocodificación" de grupo familiar real ─
+    const mapPointsFamilias: {
+      x: number; y: number; size: number; label: string; colorKey: string
+      domicilioComun: string; domiciliosUnicos: number; esEstablecimiento: boolean
+    }[] = []
     let familiaThreshold = 3
     if (cols.lat >= 0 && cols.lon >= 0 && geoRows.length > 0) {
-      const coordMap = new Map<string, { x: number; y: number; count: number; apellidos: string[] }>()
+      const domColIdx = cols.domicilioReal >= 0 ? cols.domicilioReal : cols.domicilio
+      const coordMap = new Map<string, {
+        x: number; y: number; count: number; apellidos: string[]
+        domicilios: Map<string, number>
+      }>()
       for (const r of geoRows) {
         const x = Math.round(Number(r[cols.lon]) * 10000) / 10000
         const y = Math.round(Number(r[cols.lat]) * 10000) / 10000
         const key = `${y},${x}`
-        if (!coordMap.has(key)) coordMap.set(key, { x, y, count: 0, apellidos: [] })
+        if (!coordMap.has(key)) coordMap.set(key, { x, y, count: 0, apellidos: [], domicilios: new Map() })
         const entry = coordMap.get(key)!
         entry.count++
         if (entry.apellidos.length < 4 && cols.apellido >= 0) {
           const ap = String(r[cols.apellido] ?? "").trim()
           if (ap && !entry.apellidos.includes(ap)) entry.apellidos.push(ap)
+        }
+        if (domColIdx >= 0) {
+          const dom = String(r[domColIdx] ?? "").trim().toLowerCase()
+          if (dom) entry.domicilios.set(dom, (entry.domicilios.get(dom) ?? 0) + 1)
         }
       }
       const counts = [...coordMap.values()].map(g => g.count)
@@ -679,12 +690,37 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
       for (const g of coordMap.values()) {
         if (g.count < familiaThreshold) continue
-        const nivel = g.count >= familiaThreshold * 2 ? "Muy alto" : "Alto"
-        const aps = g.apellidos.length ? ` · ${g.apellidos.join(", ")}` : ""
+
+        // Domicilio más frecuente en el grupo
+        let domicilioComun = ""
+        let maxDomCount = 0
+        for (const [dom, cnt] of g.domicilios) {
+          if (cnt > maxDomCount) { maxDomCount = cnt; domicilioComun = dom }
+        }
+        const domiciliosUnicos = g.domicilios.size
+        // Si hay muchos domicilios distintos en el mismo punto → punto de geocodificación
+        // (establecimiento electoral, centroide de zona, etc.)
+        const esEstablecimiento = g.count > 30 || domiciliosUnicos > g.count * 0.3
+
+        const nivel = esEstablecimiento
+          ? "Punto de geocodificación"
+          : g.count >= familiaThreshold * 2 ? "Muy alto" : "Alto"
+
+        const aps = g.apellidos.length ? g.apellidos.join(", ") : ""
+        const domLabel = domicilioComun
+          ? `<br/><small>Domicilio más frecuente: <em>${domicilioComun}</em> (${domiciliosUnicos} dirección${domiciliosUnicos > 1 ? "es distintas" : " única"})</small>`
+          : ""
+        const alertLabel = esEstablecimiento
+          ? `<br/><small style="color:#ef4444">⚠ Posible punto de geocodificación (${domiciliosUnicos} domicilios distintos)</small>`
+          : ""
+
         mapPointsFamilias.push({
           x: g.x, y: g.y, size: g.count,
-          label: `<strong>${g.count} electores</strong> en este domicilio${aps}<br/><small>Umbral normal: &lt;${familiaThreshold}</small>`,
+          label: `<strong>${g.count} electores en este punto</strong><br/><small>${aps}</small>${domLabel}${alertLabel}<br/><small>Umbral: ≥${familiaThreshold}</small>`,
           colorKey: nivel,
+          domicilioComun,
+          domiciliosUnicos,
+          esEstablecimiento,
         })
       }
       mapPointsFamilias.sort((a, b) => b.size - a.size)
@@ -2277,12 +2313,23 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                             subtitle={`${pct(a.mapPointsFamilias.reduce((s, p) => s + p.size, 0), a.total)}% del padrón`}
                           />
                         </div>
+                        {/* Alerta si hay muchos puntos de geocodificación */}
+                        {a.mapPointsFamilias.filter(p => p.esEstablecimiento).length > 0 && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800">
+                            <p className="font-semibold mb-1">⚠ Puntos de geocodificación detectados</p>
+                            <p>
+                              {a.mapPointsFamilias.filter(p => p.esEstablecimiento).length} punto(s) concentran muchos electores con domicilios distintos.
+                              Esto indica que la coordenada apunta a un <strong>establecimiento electoral</strong> (escuela, club, etc.) en lugar del domicilio real del elector.
+                              Los grupos marcados en <span className="text-gray-500 font-semibold">gris</span> son estos casos.
+                            </p>
+                          </div>
+                        )}
                         <LeafletMap
                           data={a.mapPointsFamilias}
-                          title="Grupos familiares destacados — acumulación inusual por domicilio"
-                          subtitle={`Domicilios con ${a.familiaThreshold}+ electores (media + 1,5σ). Tamaño del círculo proporcional a la cantidad.`}
+                          title="Concentración por coordenada — acumulación de electores"
+                          subtitle={`≥${a.familiaThreshold} electores en mismo punto. Gris = punto de geocodificación. Rojo/naranja = posible grupo familiar real.`}
                           badge="★ CORE"
-                          colorMap={{ "Muy alto": "#dc2626", "Alto": "#f59e0b" }}
+                          colorMap={{ "Muy alto": "#dc2626", "Alto": "#f59e0b", "Punto de geocodificación": "#94a3b8" }}
                           mode="bubble"
                           height={500}
                         />
@@ -2297,19 +2344,26 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                                 <tr>
                                   <th className="text-left px-4 py-2.5">#</th>
                                   <th className="text-right px-4 py-2.5">Electores</th>
-                                  <th className="text-left px-4 py-2.5">Apellidos</th>
-                                  <th className="text-right px-4 py-2.5">Nivel</th>
+                                  <th className="text-left px-4 py-2.5">Domicilio frecuente</th>
+                                  <th className="text-right px-4 py-2.5">Dir. distintas</th>
+                                  <th className="text-right px-4 py-2.5">Tipo</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-50">
                                 {a.mapPointsFamilias.slice(0, 30).map((p, i) => (
-                                  <tr key={i} className={i < 3 ? "bg-red-50/40" : ""}>
+                                  <tr key={i} className={p.esEstablecimiento ? "bg-gray-50/60" : i < 3 ? "bg-red-50/40" : ""}>
                                     <td className="px-4 py-2 text-gray-400 font-mono">{i + 1}</td>
-                                    <td className="px-4 py-2 text-right font-bold text-red-600">{p.size}</td>
-                                    <td className="px-4 py-2 text-gray-600" dangerouslySetInnerHTML={{ __html: p.label.replace(/<[^>]+>/g, " ").trim() }} />
+                                    <td className="px-4 py-2 text-right font-bold" style={{ color: p.esEstablecimiento ? "#94a3b8" : "#dc2626" }}>{p.size}</td>
+                                    <td className="px-4 py-2 text-gray-600 max-w-[200px] truncate" title={p.domicilioComun}>
+                                      {p.domicilioComun || <span className="text-gray-300 italic">sin dato</span>}
+                                    </td>
+                                    <td className="px-4 py-2 text-right text-gray-500">{p.domiciliosUnicos}</td>
                                     <td className="px-4 py-2 text-right">
-                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.colorKey === "Muy alto" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
-                                        {p.colorKey}
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        p.esEstablecimiento ? "bg-gray-100 text-gray-500" :
+                                        p.colorKey === "Muy alto" ? "bg-red-100 text-red-700" :
+                                        "bg-amber-100 text-amber-700"}`}>
+                                        {p.esEstablecimiento ? "⚠ Geocod." : p.colorKey}
                                       </span>
                                     </td>
                                   </tr>
@@ -2320,12 +2374,12 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                         </div>
                         <div className="mt-2">
                           <ExportBtn
-                            label="Exportar grupos familiares CSV"
+                            label="Exportar concentraciones CSV"
                             icon="⬇"
                             onClick={() => exportCSV(
-                              ["#", "Latitud", "Longitud", "Electores", "Nivel"],
-                              a.mapPointsFamilias.map((p, i) => [i + 1, p.y, p.x, p.size, p.colorKey]),
-                              "grupos_familiares_destacados.csv"
+                              ["#", "Latitud", "Longitud", "Electores", "Domicilio_frecuente", "Direcciones_distintas", "Tipo"],
+                              a.mapPointsFamilias.map((p, i) => [i + 1, p.y, p.x, p.size, p.domicilioComun, p.domiciliosUnicos, p.esEstablecimiento ? "Punto geocodificacion" : p.colorKey]),
+                              "concentraciones_coordenada.csv"
                             )}
                             color="purple"
                           />
