@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { fetchSheetData, fetchSheetTabs } from "@/lib/sheets"
 import type { SheetTab } from "@/types"
-import { findCol, valueCounts, ageGroups, ageFromClase, COL } from "@/lib/columnMatcher"
+import { findCol, findAllCols, valueCounts, ageGroups, ageFromClase, COL } from "@/lib/columnMatcher"
 import {
   isBlank, hasContactValue, pctFilled, cleanValueCounts,
   calcularSegmentacion, calcularIndices, calcularCompletitud,
@@ -92,6 +92,9 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
   const [sheetTabs, setSheetTabs]     = useState<SheetTab[]>([])
   const [activeSheetTab, setActiveSheetTab] = useState<string>("")
   const [filterCircuito, setFilterCircuito] = useState<string>("")
+  const [filterMesa, setFilterMesa] = useState<string>("")
+  const [filterSexo, setFilterSexo] = useState<string>("")
+  const [filterSegmento, setFilterSegmento] = useState<string>("")
   const [filterBarrio, setFilterBarrio] = useState<string>("")
   const [mapMode, setMapMode] = useState<"electores" | "participacion" | "abstención" | "contactabilidad">("electores")
 
@@ -171,7 +174,14 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
     votoGen19: findCol(headers, COL.votoGen19),
     // Default "voto" for backward-compat uses Oct 2025 (most recent)
     voto:      findCol(headers, COL.votoOct25) >= 0 ? findCol(headers, COL.votoOct25) : findCol(headers, COL.voto),
+    documento: findCol(headers, COL.documento),
+    regimen:   findCol(headers, COL.regimenImpositivo),
   }), [headers])
+
+  // All matching columns for multi-valued fields (MAIPU_celular #1, #2, etc.)
+  const celularAllCols = useMemo(() => findAllCols(headers, COL.celular), [headers])
+  const emailAllCols   = useMemo(() => findAllCols(headers, COL.email), [headers])
+  const redesAllCols   = useMemo(() => findAllCols(headers, COL.redesSociales), [headers])
 
   const segCols: SegCols = useMemo(() => ({
     iCelular:   cols.celular,
@@ -182,17 +192,21 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
     iBarrio:    cols.barrio,
   }), [cols])
 
-  // ── Apply circuito + barrio filters ─────────────────────────────────────────
+  // ── Apply all filters ───────────────────────────────────────────────────────
   const displayRows = useMemo(() => {
     let r = rows
-    if (filterCircuito && cols.circ >= 0) {
+    if (filterCircuito && cols.circ >= 0)
       r = r.filter(row => String(row[cols.circ] ?? "").trim() === filterCircuito)
-    }
-    if (filterBarrio) {
+    if (filterMesa && cols.mesa >= 0)
+      r = r.filter(row => String(row[cols.mesa] ?? "").trim() === filterMesa)
+    if (filterSexo && cols.sexo >= 0)
+      r = r.filter(row => String(row[cols.sexo] ?? "").trim().toUpperCase().startsWith(filterSexo.toUpperCase()))
+    if (filterSegmento)
+      r = r.filter(row => segmentar(row, segCols) === filterSegmento)
+    if (filterBarrio)
       r = filterByBarrio(r, filterBarrio, cols.lat, cols.lon, cols.barrio)
-    }
     return r
-  }, [rows, cols.circ, cols.lat, cols.lon, cols.barrio, filterCircuito, filterBarrio])
+  }, [rows, cols, segCols, filterCircuito, filterMesa, filterSexo, filterSegmento, filterBarrio])
 
   // ── Analytics ───────────────────────────────────────────────────────────────
   const analytics = useMemo(() => {
@@ -211,15 +225,16 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
     const totalF    = sexoData.filter(d => /^f|mujer|femenino/i.test(String(d.name))).reduce((s, d) => s + d.value, 0)
     const totalM    = sexoData.filter(d => /^m|hombre|masculino|varon/i.test(String(d.name))).reduce((s, d) => s + d.value, 0)
 
-    // Contactability
-    const cntCelular  = cols.celular >= 0 ? rows.filter(r => hasContactValue(r[cols.celular])).length : 0
-    const cntEmail    = cols.email   >= 0 ? rows.filter(r => hasContactValue(r[cols.email])).length   : 0
-    const cntRedes    = cols.redes   >= 0 ? rows.filter(r => hasContactValue(r[cols.redes])).length   : 0
-    const cntAnyContact = rows.filter(r =>
-      (cols.celular >= 0 && hasContactValue(r[cols.celular])) ||
-      (cols.email   >= 0 && hasContactValue(r[cols.email]))   ||
-      (cols.redes   >= 0 && hasContactValue(r[cols.redes]))
-    ).length
+    // Contactability — using ALL matching columns (MAIPU_celular #1, #2, etc.)
+    const hasCelularFn = (r: Row) => celularAllCols.some(i => hasContactValue(r[i]))
+    const hasEmailFn   = (r: Row) => emailAllCols.some(i => hasContactValue(r[i]))
+    const hasRedesFn   = (r: Row) => redesAllCols.some(i => hasContactValue(r[i]))
+    const hasAnyContactFn = (r: Row) => hasCelularFn(r) || hasEmailFn(r) || hasRedesFn(r)
+
+    const cntCelular    = rows.filter(hasCelularFn).length
+    const cntEmail      = rows.filter(hasEmailFn).length
+    const cntRedes      = rows.filter(hasRedesFn).length
+    const cntAnyContact = rows.filter(hasAnyContactFn).length
 
     // Enriched = has at least one non-basic column filled
     const enrichedCols = [cols.celular, cols.email, cols.redes, cols.educ, cols.civil, cols.afil]
@@ -523,6 +538,92 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       }
     })
 
+    // ── Establecimientos ─────────────────────────────────────────────────────
+    const estabData = cols.estab >= 0 ? cleanValueCounts(rows, cols.estab, 50) : []
+    const estabContactabilidad: { name: string; value: number }[] = []
+    if (cols.estab >= 0) {
+      for (const { name } of estabData) {
+        const sub = rows.filter(r => String(r[cols.estab] ?? "").trim() === name)
+        const cnt = sub.filter(hasAnyContactFn).length
+        estabContactabilidad.push({ name, value: Math.round(cnt / sub.length * 100) })
+      }
+      estabContactabilidad.sort((a, b) => b.value - a.value)
+    }
+
+    // ── Mesa contactabilidad ranking ──────────────────────────────────────────
+    const mesaContactabilidad: { name: string; total: number; cnt: number; value: number }[] = []
+    if (cols.mesa >= 0) {
+      for (const { name, value: mesaTotal } of cleanValueCounts(rows, cols.mesa, 100)) {
+        const sub = rows.filter(r => String(r[cols.mesa] ?? "").trim() === String(name))
+        const cnt = sub.filter(hasAnyContactFn).length
+        mesaContactabilidad.push({ name: `Mesa ${name}`, total: mesaTotal, cnt, value: Math.round(cnt / sub.length * 100) })
+      }
+      mesaContactabilidad.sort((a, b) => b.value - a.value)
+    }
+
+    // ── Indices per circuito ──────────────────────────────────────────────────
+    const indicesPerCircuito: {
+      name: string; total: number
+      ic: number; ip: number; imp: number; icd: number
+    }[] = []
+    if (cols.circ >= 0) {
+      for (const { name } of cleanValueCounts(rows, cols.circ, 30)) {
+        const sub = rows.filter(r => String(r[cols.circ] ?? "").trim() === name)
+        if (!sub.length) continue
+        const subSeg = calcularSegmentacion(sub, segCols)
+        const keyCols2 = [cols.nombre, cols.apellido, cols.sexo, cols.clase, cols.domicilio, cols.celular, cols.email, cols.mesa].filter(i => i >= 0)
+        const subIdx = calcularIndices(sub, subSeg, keyCols2)
+        indicesPerCircuito.push({ name, total: sub.length, ic: subIdx.contactabilidad, ip: subIdx.persuadibilidad, imp: subIdx.movilizacion, icd: subIdx.calidadDatos })
+      }
+    }
+
+    // ── Sociopolitical: ocupación, régimen, AUH/IFE ──────────────────────────
+    const profData    = cols.prof    >= 0 ? cleanValueCounts(rows, cols.prof,    15) : []
+    const regimenData = cols.regimen >= 0 ? cleanValueCounts(rows, cols.regimen, 10) : []
+
+    // ── Enriquecimiento por niveles ───────────────────────────────────────────
+    const enrichFields = [cols.celular, cols.email, cols.redes, cols.educ, cols.civil, cols.afil, cols.prof, cols.regimen].filter(i => i >= 0)
+    const enrichLevels = [0, 0, 0, 0]  // 0, 1, 2, 3+ filled
+    if (enrichFields.length) {
+      for (const r of rows) {
+        const filled = enrichFields.filter(i => hasContactValue(r[i])).length
+        enrichLevels[Math.min(filled, 3)]++
+      }
+    }
+
+    // ── Validation stats ─────────────────────────────────────────────────────
+    let duplicates = 0
+    if (cols.documento >= 0) {
+      const docMap = new Map<string, number>()
+      for (const r of rows) {
+        const d = String(r[cols.documento] ?? "").replace(/\D/g, "").replace(/^0+/, "")
+        if (d) docMap.set(d, (docMap.get(d) ?? 0) + 1)
+      }
+      duplicates = [...docMap.values()].filter(v => v > 1).reduce((s, v) => s + (v - 1), 0)
+    }
+    const missingMesa    = cols.mesa >= 0 ? rows.filter(r => isBlank(r[cols.mesa])).length    : 0
+    const missingCircuito = cols.circ >= 0 ? rows.filter(r => isBlank(r[cols.circ])).length   : 0
+    const missingDocumento = cols.documento >= 0 ? rows.filter(r => isBlank(r[cols.documento])).length : 0
+    const colMissingRanking = calcularCompletitud(headers, rows)
+      .filter(c => c.pct < 100)
+      .sort((a, b) => a.pct - b.pct)
+      .slice(0, 10)
+
+    // Completitud per circuito
+    const completitudPerCircuito: { name: string; total: number; icd: number }[] = indicesPerCircuito.map(c => ({ name: c.name, total: c.total, icd: c.icd }))
+    // Completitud per mesa
+    const completitudPerMesa: { name: string; total: number; icd: number }[] = []
+    if (cols.mesa >= 0) {
+      for (const { name, value: cnt } of cleanValueCounts(rows, cols.mesa, 50)) {
+        const sub = rows.filter(r => String(r[cols.mesa] ?? "").trim() === String(name))
+        const keyCols3 = [cols.nombre, cols.apellido, cols.domicilio, cols.celular, cols.email].filter(i => i >= 0)
+        const pcts = keyCols3.map(i => Math.round(sub.filter(r => !isBlank(r[i])).length / sub.length * 100))
+        const icd = pcts.length ? Math.round(pcts.reduce((s, p) => s + p, 0) / pcts.length) : 0
+        completitudPerMesa.push({ name: `Mesa ${name}`, total: cnt, icd })
+      }
+      completitudPerMesa.sort((a, b) => a.icd - b.icd)
+    }
+
     // ── Per-barrio comparativa ────────────────────────────────────────────────
     // For each KMZ barrio, compute key metrics as percentages
     const barrioComparativa = BARRIOS.map(b => {
@@ -561,12 +662,18 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       elecChartData, pctSep25, pctOct25, caidaSepOct, votantesFieles,
       abstencionOct25Recuperable,
       seg, indices, completitud, geoRowsCount,
-      sexoData, ageGroupData, civilData, educData, afilData,
+      sexoData, ageGroupData, civilData, educData, afilData, profData, regimenData,
       mesaData, circData, contactByCircuito, segPieData,
+      estabData, estabContactabilidad,
+      mesaContactabilidad, indicesPerCircuito,
+      enrichLevels, duplicates, missingMesa, missingCircuito, missingDocumento,
+      colMissingRanking, completitudPerCircuito, completitudPerMesa,
       pctF: pct(totalF, total), pctM: pct(totalM, total),
       pctCelular: pct(cntCelular, total), pctEmail: pct(cntEmail, total),
       pctRedes: pct(cntRedes, total), pctContact: pct(cntAnyContact, total),
       pctEnriched: pct(cntEnriched, total),
+      pctSinEnriquecer: pct(total - cntEnriched, total),
+      cntSinEnriquecer: total - cntEnriched,
       votoSI, votoNO, votoKnown,
       pctParticipacion: votoKnown > 0 ? Math.round(votoSI / votoKnown * 100) : null,
       participacionCircuito, participacionMesa, participacionBySeg, participacionSexo,
@@ -575,7 +682,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       mapPointsElectores, mapPointsParticipacion, mapPointsAbstencion, mapPointsContacto,
       SEG_COLORS, barrioComparativa,
     }
-  }, [displayRows, headers, cols, segCols])
+  }, [displayRows, headers, cols, segCols, celularAllCols, emailAllCols, redesAllCols])
 
   if (loading) return <LoadingSpinner label="Cargando padrón enriquecido..." />
   if (error)   return <ErrorState message={error} />
@@ -642,6 +749,60 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               )}
             </div>
           )}
+          {a.mesaData.length > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider">Mesa</span>
+              <select
+                value={filterMesa}
+                onChange={e => setFilterMesa(e.target.value)}
+                className="text-xs border border-sky-200 rounded-lg px-2 py-1.5 text-sky-700 bg-white focus:outline-none focus:ring-2 focus:ring-sky-300"
+              >
+                <option value="">Todas</option>
+                {a.mesaData.map(m => (
+                  <option key={m.name} value={m.name.replace(/^Mesa\s*/i, "")}>{m.name}</option>
+                ))}
+              </select>
+              {filterMesa && (
+                <button onClick={() => setFilterMesa("")} className="text-xs text-sky-500 hover:text-sky-700 ml-1">✕</button>
+              )}
+            </div>
+          )}
+          {a.sexoData.length > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider">Sexo</span>
+              <select
+                value={filterSexo}
+                onChange={e => setFilterSexo(e.target.value)}
+                className="text-xs border border-pink-200 rounded-lg px-2 py-1.5 text-pink-700 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300"
+              >
+                <option value="">Todos</option>
+                {a.sexoData.map(s => (
+                  <option key={s.name} value={s.name}>{s.name}</option>
+                ))}
+              </select>
+              {filterSexo && (
+                <button onClick={() => setFilterSexo("")} className="text-xs text-pink-500 hover:text-pink-700 ml-1">✕</button>
+              )}
+            </div>
+          )}
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wider">Segmento</span>
+            <select
+              value={filterSegmento}
+              onChange={e => setFilterSegmento(e.target.value)}
+              className="text-xs border border-amber-200 rounded-lg px-2 py-1.5 text-amber-700 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+            >
+              <option value="">Todos</option>
+              <option value="nucleoDuro">Núcleo duro</option>
+              <option value="contactableDigital">Contactable digital</option>
+              <option value="contactableTerritorial">Contactable territorial</option>
+              <option value="persuadible">Persuadible</option>
+              <option value="sinAlcance">Sin alcance</option>
+            </select>
+            {filterSegmento && (
+              <button onClick={() => setFilterSegmento("")} className="text-xs text-amber-500 hover:text-amber-700 ml-1">✕</button>
+            )}
+          </div>
           <button onClick={load} className="flex items-center gap-1.5 text-xs text-sky-600 px-3 py-2 rounded-lg hover:bg-sky-50 border border-sky-200 transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -682,13 +843,19 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           <section>
             <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — KPIs generales</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <KPICard title="Total padrón" value={a.total.toLocaleString("es-AR")} color="#1e3a5f" />
+              <KPICard title="Total electores" value={a.total.toLocaleString("es-AR")} color="#1e3a5f" />
+              {a.circData.length > 0 && <KPICard title="Circuitos" value={a.circData.length} color="#0ea5e9" />}
+              {a.mesaData.length > 0 && <KPICard title="Mesas" value={a.mesaData.length} color="#8b5cf6" subtitle={`~${Math.round(a.total/a.mesaData.length)} por mesa`} />}
+              {a.estabData.length > 0 && <KPICard title="Establecimientos" value={a.estabData.length} color="#10b981" />}
               <KPICard title="% Mujeres" value={`${a.pctF}%`} color="#ec4899" subtitle={`${a.totalF.toLocaleString("es-AR")} electoras`} />
               <KPICard title="% Hombres" value={`${a.pctM}%`} color="#0ea5e9" subtitle={`${a.totalM.toLocaleString("es-AR")} electores`} />
-              {a.avgAge !== null && <KPICard title="Edad promedio" value={`${a.avgAge} años`} color="#8b5cf6" />}
+              {a.avgAge !== null && <KPICard title="Edad promedio" value={`${a.avgAge} años`} color="#8b5cf6" subtitle="calculado con CLASE" />}
               <KPICard title="% Enriquecido" value={`${a.pctEnriched}%`} color="#10b981"
                 subtitle={`${a.cntEnriched.toLocaleString("es-AR")} registros`}
                 alert={a.pctEnriched >= 60 ? "ok" : a.pctEnriched >= 30 ? "warn" : "danger"} />
+              <KPICard title="% Sin enriquecer" value={`${a.pctSinEnriquecer}%`} color="#ef4444"
+                subtitle={`${a.cntSinEnriquecer.toLocaleString("es-AR")} sin datos extras`}
+                alert={a.pctSinEnriquecer <= 40 ? "ok" : a.pctSinEnriquecer <= 70 ? "warn" : "danger"} />
               <KPICard title="Contactables" value={`${a.pctContact}%`} color="#f59e0b"
                 subtitle={`${a.cntAnyContact.toLocaleString("es-AR")} registros`}
                 alert={a.pctContact >= 50 ? "ok" : a.pctContact >= 25 ? "warn" : "danger"} />
@@ -839,6 +1006,72 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                   onClick={() => exportCSV(["Mesa", "Electores", "% del padrón"],
                     a.mesaData.map(m => [m.name, m.value, pct(m.value, a.total)]),
                     "mesas_padron.csv")}
+                />
+              </div>
+            </section>
+          )}
+
+          {a.estabData.length > 0 && (
+            <section>
+              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Establecimientos</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                <KPICard title="Establecimientos" value={a.estabData.length} color="#10b981" />
+                <KPICard title="Mayor" value={a.estabData[0]?.name ?? "—"} color="#0ea5e9" subtitle={`${a.estabData[0]?.value ?? 0} electores`} />
+              </div>
+              <HorizontalBarChart
+                data={a.estabData} color="#10b981"
+                title="● Electores por establecimiento"
+                badge="● QUICK WIN" total={a.total} maxItems={20}
+              />
+            </section>
+          )}
+
+          {a.indicesPerCircuito.length > 0 && (
+            <section>
+              <p className="text-xs font-semibold text-purple-700 uppercase tracking-wider mb-3">⊞ Índices estratégicos por circuito</p>
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gray-50 text-gray-500 text-left uppercase tracking-wider">
+                      <tr>
+                        <th className="px-4 py-3">Circuito</th>
+                        <th className="px-4 py-3 text-right">Electores</th>
+                        <th className="px-4 py-3 text-right">IC</th>
+                        <th className="px-4 py-3 text-right">IP</th>
+                        <th className="px-4 py-3 text-right">IMP</th>
+                        <th className="px-4 py-3 text-right">ICD</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {a.indicesPerCircuito.map(c => (
+                        <tr key={c.name} className="hover:bg-gray-50">
+                          <td className="px-4 py-2.5 font-semibold text-gray-800">{c.name}</td>
+                          <td className="px-4 py-2.5 text-right text-gray-500">{c.total.toLocaleString("es-AR")}</td>
+                          {[c.ic, c.ip, c.imp, c.icd].map((v, i) => (
+                            <td key={i} className="px-4 py-2.5 text-right font-bold"
+                              style={{ color: v >= 60 ? "#10b981" : v >= 35 ? "#f59e0b" : "#ef4444" }}>
+                              {v}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-4 py-2 border-t border-gray-50 flex gap-4 text-[10px] text-gray-400">
+                  <span>IC = Índice de Contactabilidad</span>
+                  <span>IP = Persuadibilidad</span>
+                  <span>IMP = Movilización</span>
+                  <span>ICD = Calidad de datos</span>
+                </div>
+              </div>
+              <div className="mt-3">
+                <ExportBtn label="Exportar índices por circuito" icon="⬇"
+                  onClick={() => exportCSV(
+                    ["Circuito", "Electores", "IC (Contactabilidad)", "IP (Persuadibilidad)", "IMP (Movilización)", "ICD (Calidad)"],
+                    a.indicesPerCircuito.map(c => [c.name, c.total, c.ic, c.ip, c.imp, c.icd]),
+                    "indices_por_circuito.csv"
+                  )}
                 />
               </div>
             </section>
@@ -1086,6 +1319,43 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               )}
             </div>
           )}
+
+          {(a.profData.length > 0 || a.regimenData.length > 0) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {a.profData.length > 0 && (
+                <HorizontalBarChart
+                  data={a.profData} color="#8b5cf6"
+                  title="● Ocupación / profesión" badge="● QUICK WIN" total={a.total}
+                />
+              )}
+              {a.regimenData.length > 0 && (
+                <HorizontalBarChart
+                  data={a.regimenData} color="#f59e0b"
+                  title="● Régimen impositivo" badge="● QUICK WIN" total={a.total}
+                />
+              )}
+            </div>
+          )}
+
+          {(a.cntAUH > 0 || a.cntIFE > 0) && (
+            <section>
+              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Beneficios sociales</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {a.cntAUH > 0 && (
+                  <KPICard title="Beneficiarios AUH" value={a.cntAUH.toLocaleString("es-AR")}
+                    color="#0ea5e9" subtitle={`${pct(a.cntAUH, a.total)}% del padrón`} />
+                )}
+                {a.cntIFE > 0 && (
+                  <KPICard title="Beneficiarios IFE" value={a.cntIFE.toLocaleString("es-AR")}
+                    color="#10b981" subtitle={`${pct(a.cntIFE, a.total)}% del padrón`} />
+                )}
+                {a.cntAUH > 0 && a.cntIFE > 0 && (
+                  <KPICard title="AUH + IFE (overlap)" value={(a.cntAUH + a.cntIFE).toLocaleString("es-AR")}
+                    color="#8b5cf6" subtitle="beneficiarios totales" />
+                )}
+              </div>
+            </section>
+          )}
         </div>
       )}
 
@@ -1141,6 +1411,44 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
             />
           )}
 
+          {a.mesaContactabilidad.length > 0 && (
+            <section>
+              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Ranking de mesas por contactabilidad</p>
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto max-h-80">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-gray-50 text-gray-500 uppercase tracking-wider">
+                      <tr>
+                        <th className="text-left px-4 py-2.5">#</th>
+                        <th className="text-left px-4 py-2.5">Mesa</th>
+                        <th className="text-right px-4 py-2.5">Padrón</th>
+                        <th className="text-right px-4 py-2.5">Contactables</th>
+                        <th className="text-right px-4 py-2.5">%</th>
+                        <th className="px-4 py-2.5 w-20"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {a.mesaContactabilidad.map((m, i) => (
+                        <tr key={m.name} className={i < 3 ? "bg-green-50/40" : i >= a.mesaContactabilidad.length - 3 ? "bg-red-50/30" : ""}>
+                          <td className="px-4 py-2 text-gray-400">{i+1}</td>
+                          <td className="px-4 py-2 font-medium text-gray-700">{m.name}</td>
+                          <td className="px-4 py-2 text-right text-gray-500">{m.total.toLocaleString("es-AR")}</td>
+                          <td className="px-4 py-2 text-right text-green-600 font-medium">{m.cnt.toLocaleString("es-AR")}</td>
+                          <td className="px-4 py-2 text-right font-bold" style={{ color: m.value >= 50 ? "#10b981" : m.value >= 25 ? "#f59e0b" : "#ef4444" }}>{m.value}%</td>
+                          <td className="px-4 py-2">
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${m.value}%`, backgroundColor: m.value >= 50 ? "#10b981" : m.value >= 25 ? "#f59e0b" : "#ef4444" }} />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          )}
+
           <div className="mt-3 flex gap-3 flex-wrap">
             <ExportBtn label="Exportar contactables" icon="⬇"
               onClick={() => exportSegment(headers, rows, segCols, "contactableDigital", "contactables_digital.csv")}
@@ -1156,6 +1464,16 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               }}
               color="purple"
             />
+            {a.mesaContactabilidad.length > 0 && (
+              <ExportBtn label="Ranking mesas contactabilidad" icon="⬇"
+                onClick={() => exportCSV(
+                  ["Mesa", "Padrón", "Contactables", "% Contactabilidad"],
+                  a.mesaContactabilidad.map(m => [m.name, m.total, m.cnt, m.value]),
+                  "ranking_mesas_contactabilidad.csv"
+                )}
+                color="sky"
+              />
+            )}
           </div>
         </div>
       )}
@@ -1319,6 +1637,137 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* ── Validation / inconsistencies ──── */}
+          <section>
+            <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Validaciones y consistencia</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {cols.documento >= 0 && (
+                <KPICard title="Duplicados (DNI)" value={a.duplicates}
+                  color={a.duplicates === 0 ? "#10b981" : "#ef4444"}
+                  alert={a.duplicates === 0 ? "ok" : "danger"}
+                  subtitle={a.duplicates === 0 ? "Sin duplicados" : "registros extras"} />
+              )}
+              {cols.mesa >= 0 && (
+                <KPICard title="Sin mesa" value={a.missingMesa}
+                  color={a.missingMesa === 0 ? "#10b981" : "#f59e0b"}
+                  subtitle={a.missingMesa === 0 ? "Completo" : "registros sin mesa"} />
+              )}
+              {cols.circ >= 0 && (
+                <KPICard title="Sin circuito" value={a.missingCircuito}
+                  color={a.missingCircuito === 0 ? "#10b981" : "#f59e0b"}
+                  subtitle={a.missingCircuito === 0 ? "Completo" : "sin circuito"} />
+              )}
+              {cols.documento >= 0 && (
+                <KPICard title="Sin DNI" value={a.missingDocumento}
+                  color={a.missingDocumento === 0 ? "#10b981" : "#f59e0b"}
+                  subtitle={a.missingDocumento === 0 ? "Completo" : "sin documento"} />
+              )}
+            </div>
+          </section>
+
+          {/* Enrichment levels */}
+          {a.enrichLevels.some(v => v > 0) && (
+            <section>
+              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Nivel de enriquecimiento por registro</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { label: "Sin datos extras", value: a.enrichLevels[0], color: "#ef4444" },
+                  { label: "1 campo extra", value: a.enrichLevels[1], color: "#f59e0b" },
+                  { label: "2 campos extras", value: a.enrichLevels[2], color: "#0ea5e9" },
+                  { label: "3+ campos extras", value: a.enrichLevels[3], color: "#10b981" },
+                ].map(s => (
+                  <div key={s.label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                    <p className="text-xs text-gray-500 mb-1">{s.label}</p>
+                    <p className="text-2xl font-black" style={{ color: s.color }}>{s.value.toLocaleString("es-AR")}</p>
+                    <p className="text-xs text-gray-400">{pct(s.value, a.total)}%</p>
+                    <div className="mt-2 h-1.5 bg-gray-100 rounded-full">
+                      <div className="h-full rounded-full" style={{ width: `${pct(s.value, a.total)}%`, backgroundColor: s.color }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Columns with most missing */}
+          {a.colMissingRanking.length > 0 && (
+            <section>
+              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-3">● Columnas con mayor % de faltante</p>
+              <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-2.5">
+                {a.colMissingRanking.map(c => (
+                  <div key={c.name}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-gray-600 font-medium truncate max-w-[60%]">{c.name}</span>
+                      <span className={`font-bold ${100-c.pct >= 80 ? "text-red-500" : 100-c.pct >= 50 ? "text-amber-500" : "text-gray-400"}`}>
+                        {100-c.pct}% faltante
+                        <span className="text-gray-400 font-normal ml-1">({(c.total-c.filled).toLocaleString("es-AR")} vacíos)</span>
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-red-400" style={{ width: `${100-c.pct}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Completitud per circuito + mesa side by side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {a.completitudPerCircuito.length > 0 && (
+              <section>
+                <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Calidad por circuito (ICD)</p>
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="overflow-y-auto max-h-64">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-gray-50 text-gray-500"><tr>
+                        <th className="text-left px-4 py-2">Circuito</th>
+                        <th className="text-right px-4 py-2">Electores</th>
+                        <th className="text-right px-4 py-2">ICD</th>
+                      </tr></thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {a.completitudPerCircuito.sort((a,b) => a.icd - b.icd).map(c => (
+                          <tr key={c.name}>
+                            <td className="px-4 py-2 font-medium text-gray-700">{c.name}</td>
+                            <td className="px-4 py-2 text-right text-gray-500">{c.total.toLocaleString("es-AR")}</td>
+                            <td className="px-4 py-2 text-right font-bold"
+                              style={{ color: c.icd >= 70 ? "#10b981" : c.icd >= 40 ? "#f59e0b" : "#ef4444" }}>{c.icd}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            )}
+            {a.completitudPerMesa.length > 0 && (
+              <section>
+                <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Mesas con menor completitud</p>
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="overflow-y-auto max-h-64">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-gray-50 text-gray-500"><tr>
+                        <th className="text-left px-4 py-2">Mesa</th>
+                        <th className="text-right px-4 py-2">Electores</th>
+                        <th className="text-right px-4 py-2">ICD</th>
+                      </tr></thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {a.completitudPerMesa.slice(0, 20).map(m => (
+                          <tr key={m.name}>
+                            <td className="px-4 py-2 font-medium text-gray-700">{m.name}</td>
+                            <td className="px-4 py-2 text-right text-gray-500">{m.total.toLocaleString("es-AR")}</td>
+                            <td className="px-4 py-2 text-right font-bold"
+                              style={{ color: m.icd >= 70 ? "#10b981" : m.icd >= 40 ? "#f59e0b" : "#ef4444" }}>{m.icd}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            )}
           </div>
 
           <section className="bg-gray-50 rounded-2xl p-5 border border-gray-200">
