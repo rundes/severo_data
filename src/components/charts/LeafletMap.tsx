@@ -7,6 +7,7 @@ interface Point {
   y: number
   label?: string
   colorKey?: string
+  size?: number  // bubble mode: scales circle radius
 }
 
 interface Props {
@@ -15,7 +16,7 @@ interface Props {
   subtitle?: string
   badge?: string
   colorMap?: Record<string, string>
-  mode?: "scatter" | "heat"
+  mode?: "scatter" | "heat" | "bubble"
   height?: number
   showBarrios?: boolean
 }
@@ -25,7 +26,7 @@ const DEFAULT_COLORS = [
   "#8b5cf6", "#ec4899", "#14b8a6",
 ]
 
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? ""
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || ""
 const BARRIOS_GEOJSON = `${BASE}/barrios-maipu.geojson`
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -132,6 +133,50 @@ export default function LeafletMap({
           maxZoom: 17,
           gradient: { 0.2: "#3b82f6", 0.4: "#10b981", 0.6: "#f59e0b", 0.8: "#ef4444", 1.0: "#7c2d12" },
         }).addTo(map)
+
+      } else if (mode === "bubble") {
+        // Bubble map: each point as a scaled circle, no clustering
+        const colorKeys = [...new Set(points.map((p) => p.colorKey ?? "default"))]
+        const autoColorMap: Record<string, string> = {}
+        colorKeys.forEach((k, i) => {
+          autoColorMap[k] = colorMap?.[k] ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length]
+        })
+
+        const maxSize = Math.max(...points.map(p => p.size ?? 1), 1)
+
+        points.forEach((p) => {
+          const color = autoColorMap[p.colorKey ?? "default"] ?? "#ef4444"
+          const raw = p.size ?? 1
+          const radius = 8 + Math.round((raw / maxSize) * 32)
+          const circle = L.circleMarker([p.y, p.x], {
+            radius,
+            fillColor: color,
+            color: "#fff",
+            weight: 2,
+            fillOpacity: 0.78,
+          })
+          if (p.label) {
+            circle.bindPopup(p.label, { closeButton: false, className: "leaflet-map-popup" })
+          }
+          circle.addTo(map)
+        })
+
+        if (colorKeys.length > 1) {
+          const legendItems = colorKeys
+            .map(k => `<div style="display:flex;align-items:center;gap:5px;margin:2px 0">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${autoColorMap[k]};flex-shrink:0"></span>
+              <span>${k}</span></div>`)
+            .join("")
+          const LegendControl = L.Control.extend({
+            onAdd: () => {
+              const div = L.DomUtil.create("div")
+              div.innerHTML = `<div style="background:rgba(255,255,255,0.92);padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.4;box-shadow:0 1px 5px rgba(0,0,0,.2);max-width:200px">${legendItems}</div>`
+              return div
+            },
+          })
+          new LegendControl({ position: "bottomright" }).addTo(map)
+        }
+
       } else {
         // Clustered scatter — groups nearby points into colour-coded circles,
         // expanding into individual markers as the user zooms in.

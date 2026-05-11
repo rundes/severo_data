@@ -6,6 +6,7 @@ interface Point {
   y: number
   label?: string
   colorKey?: string
+  size?: number
 }
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
   subtitle?: string
   badge?: string
   colorMap?: Record<string, string>
-  mode?: "scatter" | "heat"
+  mode?: "scatter" | "heat" | "bubble"
   height?: number
 }
 
