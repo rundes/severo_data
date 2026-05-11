@@ -655,36 +655,59 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
     }).filter((b): b is NonNullable<typeof b> => b !== null)
       .sort((a, b) => b.total - a.total)
 
-    // ── Grupos familiares: domicilios con acumulación inusual de electores ────
-    const mapPointsFamilias: { x: number; y: number; size: number; label: string; colorKey: string }[] = []
+    // ── Grupos familiares: agrupados por texto exacto del campo DOMICILIO ────────
+    const mapPointsFamilias: {
+      x: number; y: number; size: number; label: string; colorKey: string
+      domicilio: string; apellidos: string[]
+    }[] = []
     let familiaThreshold = 3
-    if (cols.lat >= 0 && cols.lon >= 0 && geoRows.length > 0) {
-      const coordMap = new Map<string, { x: number; y: number; count: number; apellidos: string[] }>()
-      for (const r of geoRows) {
-        const x = Math.round(Number(r[cols.lon]) * 10000) / 10000
-        const y = Math.round(Number(r[cols.lat]) * 10000) / 10000
-        const key = `${y},${x}`
-        if (!coordMap.has(key)) coordMap.set(key, { x, y, count: 0, apellidos: [] })
-        const entry = coordMap.get(key)!
+    if (cols.domicilio >= 0) {
+      // Agrupar por texto exacto del campo DOMICILIO (sin normalizar — tal cual figura)
+      const domMap = new Map<string, {
+        dom: string; count: number; apellidos: string[]
+        sumX: number; sumY: number; coordCount: number
+      }>()
+
+      for (const r of rows) {
+        const dom = String(r[cols.domicilio] ?? "").trim()
+        if (!dom || isBlank(dom)) continue
+        if (!domMap.has(dom)) domMap.set(dom, { dom, count: 0, apellidos: [], sumX: 0, sumY: 0, coordCount: 0 })
+        const entry = domMap.get(dom)!
         entry.count++
-        if (entry.apellidos.length < 4 && cols.apellido >= 0) {
+        if (entry.apellidos.length < 5 && cols.apellido >= 0) {
           const ap = String(r[cols.apellido] ?? "").trim()
           if (ap && !entry.apellidos.includes(ap)) entry.apellidos.push(ap)
         }
+        // Acumular coordenadas para calcular centroide del grupo
+        if (cols.lat >= 0 && cols.lon >= 0) {
+          const x = Number(r[cols.lon])
+          const y = Number(r[cols.lat])
+          if (!isNaN(x) && !isNaN(y) && x !== 0 && y !== 0) {
+            entry.sumX += x; entry.sumY += y; entry.coordCount++
+          }
+        }
       }
-      const counts = [...coordMap.values()].map(g => g.count)
-      const mean = counts.reduce((s, c) => s + c, 0) / counts.length
-      const std = Math.sqrt(counts.reduce((s, c) => s + (c - mean) ** 2, 0) / counts.length)
-      familiaThreshold = Math.max(3, Math.round(mean + 1.5 * std))
 
-      for (const g of coordMap.values()) {
-        if (g.count < familiaThreshold) continue
+      // Umbral estadístico sobre todos los grupos con ≥2 electores
+      const counts = [...domMap.values()].filter(g => g.count >= 2).map(g => g.count)
+      if (counts.length) {
+        const mean = counts.reduce((s, c) => s + c, 0) / counts.length
+        const std = Math.sqrt(counts.reduce((s, c) => s + (c - mean) ** 2, 0) / counts.length)
+        familiaThreshold = Math.max(3, Math.round(mean + 1.5 * std))
+      }
+
+      for (const g of domMap.values()) {
+        if (g.count < familiaThreshold || g.coordCount === 0) continue
+        const x = g.sumX / g.coordCount
+        const y = g.sumY / g.coordCount
         const nivel = g.count >= familiaThreshold * 2 ? "Muy alto" : "Alto"
-        const aps = g.apellidos.length ? ` · ${g.apellidos.join(", ")}` : ""
+        const aps = g.apellidos.join(", ")
         mapPointsFamilias.push({
-          x: g.x, y: g.y, size: g.count,
-          label: `<strong>${g.count} electores</strong> en este domicilio${aps}<br/><small>Umbral normal: &lt;${familiaThreshold}</small>`,
+          x, y, size: g.count,
+          label: `<strong>${g.count} electores</strong><br/><em>${g.dom}</em><br/><small>${aps}</small><br/><small>Umbral: ≥${familiaThreshold}</small>`,
           colorKey: nivel,
+          domicilio: g.dom,
+          apellidos: [...g.apellidos],
         })
       }
       mapPointsFamilias.sort((a, b) => b.size - a.size)
@@ -2279,8 +2302,8 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                         </div>
                         <LeafletMap
                           data={a.mapPointsFamilias}
-                          title="Grupos familiares destacados — acumulación inusual por domicilio"
-                          subtitle={`Domicilios con ${a.familiaThreshold}+ electores (media + 1,5σ). Tamaño del círculo proporcional a la cantidad.`}
+                          title="Grupos con mismo domicilio — acumulación inusual de electores"
+                          subtitle={`Agrupado por texto exacto del campo DOMICILIO · ≥${a.familiaThreshold} electores en la misma dirección`}
                           badge="★ CORE"
                           colorMap={{ "Muy alto": "#dc2626", "Alto": "#f59e0b" }}
                           mode="bubble"
@@ -2288,7 +2311,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                         />
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                           <div className="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
-                            <p className="text-sm font-semibold text-gray-800">Top domicilios por cantidad de electores</p>
+                            <p className="text-sm font-semibold text-gray-800">Top domicilios por cantidad de electores registrados</p>
                             <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">★ CORE</span>
                           </div>
                           <div className="overflow-x-auto max-h-72">
@@ -2297,7 +2320,8 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                                 <tr>
                                   <th className="text-left px-4 py-2.5">#</th>
                                   <th className="text-right px-4 py-2.5">Electores</th>
-                                  <th className="text-left px-4 py-2.5">Apellidos</th>
+                                  <th className="text-left px-4 py-2.5">DOMICILIO (texto exacto)</th>
+                                  <th className="text-left px-4 py-2.5">Apellidos muestra</th>
                                   <th className="text-right px-4 py-2.5">Nivel</th>
                                 </tr>
                               </thead>
@@ -2306,7 +2330,12 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                                   <tr key={i} className={i < 3 ? "bg-red-50/40" : ""}>
                                     <td className="px-4 py-2 text-gray-400 font-mono">{i + 1}</td>
                                     <td className="px-4 py-2 text-right font-bold text-red-600">{p.size}</td>
-                                    <td className="px-4 py-2 text-gray-600" dangerouslySetInnerHTML={{ __html: p.label.replace(/<[^>]+>/g, " ").trim() }} />
+                                    <td className="px-4 py-2 font-medium text-gray-800 max-w-[180px] truncate" title={p.domicilio}>
+                                      {p.domicilio}
+                                    </td>
+                                    <td className="px-4 py-2 text-gray-500 max-w-[180px] truncate" title={p.apellidos.join(", ")}>
+                                      {p.apellidos.join(", ")}
+                                    </td>
                                     <td className="px-4 py-2 text-right">
                                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.colorKey === "Muy alto" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
                                         {p.colorKey}
@@ -2320,12 +2349,12 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                         </div>
                         <div className="mt-2">
                           <ExportBtn
-                            label="Exportar grupos familiares CSV"
+                            label="Exportar grupos por domicilio CSV"
                             icon="⬇"
                             onClick={() => exportCSV(
-                              ["#", "Latitud", "Longitud", "Electores", "Nivel"],
-                              a.mapPointsFamilias.map((p, i) => [i + 1, p.y, p.x, p.size, p.colorKey]),
-                              "grupos_familiares_destacados.csv"
+                              ["#", "DOMICILIO", "Electores", "Apellidos_muestra", "Nivel", "Latitud", "Longitud"],
+                              a.mapPointsFamilias.map((p, i) => [i + 1, p.domicilio, p.size, p.apellidos.join("; "), p.colorKey, p.y, p.x]),
+                              "grupos_mismo_domicilio.csv"
                             )}
                             color="purple"
                           />
