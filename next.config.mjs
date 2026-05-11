@@ -1,6 +1,6 @@
 // @ts-check
 
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "/severo_data"
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "/severo_data"
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
