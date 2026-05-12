@@ -210,6 +210,15 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
   }, [rows, cols, segCols, filterCircuito, filterMesa, filterSexo, filterSegmento, filterBarrio])
 
   // ── Analytics ───────────────────────────────────────────────────────────────
+  function topEntry(data: { name: string; value: number }[]) {
+    return data.length ? data.reduce((a, b) => b.value > a.value ? b : a) : null
+  }
+  function captionTop(data: { name: string; value: number }[], tot: number, prefix = "El más frecuente") {
+    const top = topEntry(data)
+    if (!top) return undefined
+    return `${prefix}: ${top.name} (${top.value.toLocaleString("es-AR")} — ${((top.value / tot) * 100).toFixed(1)}%)`
+  }
+
   const analytics = useMemo(() => {
     const rows = displayRows
     if (!rows.length) return null
@@ -747,6 +756,55 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       SEG_COLORS, barrioComparativa,
       mapPointsFamilias, familiaThreshold,
       ndAgeGroupData, ndSexoData,
+
+      // ── Captions ─────────────────────────────────────────────────────────────
+      capSexo: (() => {
+        const top = topEntry(sexoData); if (!top) return undefined
+        return `Predomina ${top.name}: ${top.value.toLocaleString("es-AR")} electores (${((top.value / total) * 100).toFixed(1)}%)`
+      })(),
+      capEdad: (() => {
+        const top = topEntry(ageGroupData); if (!top) return undefined
+        return `Franja más numerosa: ${top.name} con ${top.value.toLocaleString("es-AR")} electores (${((top.value / total) * 100).toFixed(1)}%)`
+      })(),
+      capCivil:   captionTop(civilData,  total, "Estado más frecuente"),
+      capEduc:    captionTop(educData,   total, "Nivel más frecuente"),
+      capAfil:    captionTop(afilData,   total, "Partido más frecuente"),
+      capProf:    captionTop(profData ?? [],   total, "Ocupación más frecuente"),
+      capRegimen: captionTop(regimenData ?? [], total, "Régimen más frecuente"),
+      capCirc:    captionTop(circData,   total, "Circuito con más electores"),
+      capMesa:    captionTop(mesaData,   total, "Mesa con más electores"),
+      capContactCirc: captionTop(contactByCircuito, 100, "Circuito con mayor contactabilidad"),
+      capSegPie: (() => {
+        const contactable = seg.nucleoDuro + seg.contactableDigital + seg.contactableTerritorial
+        return `${contactable.toLocaleString("es-AR")} electores son contactables (${((contactable / total) * 100).toFixed(1)}%)`
+      })(),
+      capAfil2: captionTop(afilData, total, "Partido más frecuente"),
+      capPartSeg: (() => {
+        const top = topEntry(participacionBySeg); if (!top) return undefined
+        return `Mayor participación en el segmento "${top.name}": ${top.value}%`
+      })(),
+      capNdSexo: (() => {
+        const top = topEntry(ndRows.length > 0 && cols.sexo >= 0 ? cleanValueCounts(ndRows, cols.sexo, 10) : [])
+        if (!top || ndRows.length === 0) return undefined
+        return `Predomina ${top.name}: ${top.value.toLocaleString("es-AR")} electores (${((top.value / ndRows.length) * 100).toFixed(1)}% del núcleo duro)`
+      })(),
+      capNdEdad: (() => {
+        const data = ndRows.length > 0 && cols.clase >= 0 ? ageGroups(ndRows, cols.clase, cols.sexo) : []
+        const top = topEntry(data); if (!top) return undefined
+        const topFull = data.find(d => d.name === top.name)
+        const mf = topFull ? ` — ${(topFull.M ?? 0).toLocaleString("es-AR")} masc. / ${(topFull.F ?? 0).toLocaleString("es-AR")} fem.` : ""
+        return `Franja más numerosa del núcleo duro: ${top.name} (${top.value.toLocaleString("es-AR")} electores${mf})`
+      })(),
+      capCruceEdad: (() => {
+        if (!cruceEdad.length) return undefined
+        const top = cruceEdad.reduce((a, b) => b.pct > a.pct ? b : a)
+        return `Mayor participación en franja ${top.name}: ${top.pct}% (${top.si.toLocaleString("es-AR")} de ${top.total.toLocaleString("es-AR")})`
+      })(),
+      capCruceSexo: (() => {
+        if (!cruceSexo.length) return undefined
+        const top = cruceSexo.reduce((a, b) => b.pct > a.pct ? b : a)
+        return `Mayor participación: ${top.name} con ${top.pct}% (${top.si.toLocaleString("es-AR")} de ${top.total.toLocaleString("es-AR")})`
+      })(),
     }
   }, [displayRows, headers, cols, segCols, celularAllCols, emailAllCols, redesAllCols])
 
@@ -960,6 +1018,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               <PieChartComponent
                 data={a.segPieData} dataKey="value" nameKey="name"
                 title="Segmentación del padrón"
+                caption={a.capSegPie}
               />
             </section>
             <section>
@@ -1026,6 +1085,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               data={a.circData} color="#1e3a5f"
               title="★ Electores por circuito"
               badge="★ CORE" total={a.total}
+              caption={a.capCirc}
             />
           )}
 
@@ -1036,6 +1096,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 data={a.mesaData} color="#0ea5e9"
                 title="● Electores por mesa (top 30)"
                 badge="● QUICK WIN" total={a.total} maxItems={30}
+                caption={a.capMesa}
               />
             </section>
           )}
@@ -1088,6 +1149,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 data={a.estabData} color="#10b981"
                 title="● Electores por establecimiento"
                 badge="● QUICK WIN" total={a.total} maxItems={20}
+                caption={`${a.estabData.length} establecimientos detectados. Mayor: ${a.estabData[0]?.name ?? "—"} (${a.estabData[0]?.value ?? 0} electores)`}
               />
             </section>
           )}
@@ -1150,6 +1212,11 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 data={a.participacionCircuito} color="#10b981"
                 title="% que votó por circuito"
                 badge="★ CORE"
+                caption={(() => {
+                  const top = a.participacionCircuito.reduce((a, b) => b.value > a.value ? b : a, { name: "", value: 0 })
+                  const bot = a.participacionCircuito.reduce((a, b) => b.value < a.value ? b : a, { name: "", value: 100 })
+                  return `Mayor participación: circuito ${top.name} (${top.value}%) · Menor: ${bot.name} (${bot.value}%)`
+                })()}
               />
             </section>
           )}
@@ -1161,6 +1228,10 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 data={a.participacionMesa} color="#0ea5e9"
                 title="% que votó por mesa"
                 badge="● QUICK WIN"
+                caption={(() => {
+                  const top = a.participacionMesa.reduce((a, b) => b.value > a.value ? b : a, { name: "", value: 0 })
+                  return `Mesa con mayor participación: ${top.name} (${top.value}%)`
+                })()}
               />
             </section>
           )}
@@ -1359,12 +1430,13 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {a.sexoData.length > 0 && (
-              <PieChartComponent data={a.sexoData} dataKey="value" nameKey="name" title="★ Distribución por sexo" />
+              <PieChartComponent data={a.sexoData} dataKey="value" nameKey="name" title="★ Distribución por sexo" caption={a.capSexo} />
             )}
             {a.ageGroupData.length > 0 && (
               <BarChartComponent
                 data={a.ageGroupData} dataKey="value" nameKey="name"
                 color="#8b5cf6" title="★ Grupos etarios" total={a.total}
+                caption={a.capEdad}
               />
             )}
           </div>
@@ -1375,12 +1447,14 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 <HorizontalBarChart
                   data={a.civilData} color="#0ea5e9"
                   title="● Estado civil" badge="● QUICK WIN" total={a.total}
+                  caption={a.capCivil}
                 />
               )}
               {a.educData.length > 0 && (
                 <HorizontalBarChart
                   data={a.educData} color="#10b981"
                   title="● Nivel educativo" badge="● QUICK WIN" total={a.total}
+                  caption={a.capEduc}
                 />
               )}
             </div>
@@ -1392,12 +1466,14 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 <HorizontalBarChart
                   data={a.profData} color="#8b5cf6"
                   title="● Ocupación / profesión" badge="● QUICK WIN" total={a.total}
+                  caption={a.capProf}
                 />
               )}
               {a.regimenData.length > 0 && (
                 <HorizontalBarChart
                   data={a.regimenData} color="#f59e0b"
                   title="● Régimen impositivo" badge="● QUICK WIN" total={a.total}
+                  caption={a.capRegimen}
                 />
               )}
             </div>
@@ -1563,12 +1639,14 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
             <PieChartComponent
               data={a.segPieData} dataKey="value" nameKey="name"
               title="★ Segmentación electoral"
+              caption={a.capSegPie}
             />
             {a.afilData.length > 0 && (
               <HorizontalBarChart
                 data={a.afilData} color="#1e3a5f"
                 title="★ Afiliación política"
                 badge="★ CORE" total={a.total}
+                caption={a.capAfil2}
               />
             )}
           </div>
@@ -1589,6 +1667,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                   <PieChartComponent
                     data={a.ndSexoData} dataKey="value" nameKey="name"
                     title="Distribución por sexo — Núcleo duro"
+                    caption={a.capNdSexo}
                   />
                 )}
                 {a.ndAgeGroupData.length > 0 && (
@@ -1609,6 +1688,9 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                         <Bar dataKey="F" name="Femenino"  fill="#ec4899" radius={[4, 4, 0, 0]} maxBarSize={32} />
                       </BarChart>
                     </ResponsiveContainer>
+                    {a.capNdEdad && (
+                      <p className="mt-3 text-xs text-gray-500 border-t border-gray-100 pt-2">{a.capNdEdad}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -1622,6 +1704,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 data={a.participacionBySeg} color="#10b981"
                 title="% que votó por segmento electoral"
                 badge="★ CORE"
+                caption={a.capPartSeg}
               />
             </section>
           )}
@@ -1945,6 +2028,12 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                     color="#1e3a5f"
                     title="% participación por elección"
                     total={100}
+                    caption={(() => {
+                      if (!a.elecChartData.length) return undefined
+                      const top = a.elecChartData.reduce((x, y) => (y.value as number) > (x.value as number) ? y : x)
+                      const bot = a.elecChartData.reduce((x, y) => (y.value as number) < (x.value as number) ? y : x)
+                      return `Mayor participación: ${top.name} (${top.value}%) · Menor: ${bot.name} (${bot.value}%)`
+                    })()}
                   />
                 </div>
               </section>
@@ -2063,6 +2152,9 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                           </div>
                         </div>
                       ))}
+                      {a.capCruceEdad && (
+                        <p className="text-xs text-gray-500 border-t border-gray-100 pt-2">{a.capCruceEdad}</p>
+                      )}
                     </div>
                   </section>
                 )}
@@ -2087,6 +2179,9 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                           </div>
                         </div>
                       ))}
+                      {a.capCruceSexo && (
+                        <p className="text-xs text-gray-500 border-t border-gray-100 pt-2">{a.capCruceSexo}</p>
+                      )}
                     </div>
                   </section>
                 )}

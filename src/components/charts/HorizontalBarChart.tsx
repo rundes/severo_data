@@ -15,9 +15,10 @@ interface Props {
   badge?: string
   maxItems?: number
   total?: number
+  caption?: string
 }
 
-export default function HorizontalBarChart({ data, color, title, subtitle, badge, maxItems = 15, total }: Props) {
+export default function HorizontalBarChart({ data, color, title, subtitle, badge, maxItems = 15, total, caption }: Props) {
   const sliced = data.slice(0, maxItems)
   const height = Math.max(200, sliced.length * 32)
 
@@ -87,6 +88,9 @@ export default function HorizontalBarChart({ data, color, title, subtitle, badge
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      {caption && (
+        <p className="mt-3 text-xs text-gray-500 border-t border-gray-100 pt-2">{caption}</p>
+      )}
     </div>
   )
 }
