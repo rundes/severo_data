@@ -23,6 +23,7 @@ import DataTable from "@/components/dashboard/DataTable"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import ErrorState from "@/components/ui/ErrorState"
 import LeafletMap from "@/components/charts/LeafletMapWrapper"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 
 type Row = (string | number | null)[]
 interface Props { sheetId: string }
@@ -284,6 +285,11 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
     // Age groups
     const ageGroupData = cols.clase >= 0 ? ageGroups(rows, cols.clase, cols.sexo) : []
+
+    // Núcleo duro — desagregación por sexo y edad
+    const ndRows = rows.filter(r => segmentar(r, segCols) === "nucleoDuro")
+    const ndAgeGroupData = ndRows.length > 0 && cols.clase >= 0 ? ageGroups(ndRows, cols.clase, cols.sexo) : []
+    const ndSexoData     = ndRows.length > 0 && cols.sexo  >= 0 ? cleanValueCounts(ndRows, cols.sexo, 10) : []
 
     // Civil / Educ / Afil
     const civilData = cols.civil >= 0 ? cleanValueCounts(rows, cols.civil, 10) : []
@@ -740,6 +746,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       mapPointsElectores, mapPointsParticipacion, mapPointsAbstencion, mapPointsContacto,
       SEG_COLORS, barrioComparativa,
       mapPointsFamilias, familiaThreshold,
+      ndAgeGroupData, ndSexoData,
     }
   }, [displayRows, headers, cols, segCols, celularAllCols, emailAllCols, redesAllCols])
 
@@ -1571,6 +1578,41 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               <p className="font-medium mb-1">Columna de afiliación no detectada</p>
               <p className="text-xs">La segmentación usa domicilio y datos de contacto. Para activar "Núcleo duro" basado en afiliación, agregá una columna con nombre "afiliacion", "partido_pol" o similar al sheet.</p>
             </div>
+          )}
+
+          {/* Núcleo duro — desagregación por sexo y edad */}
+          {(a.ndSexoData.length > 0 || a.ndAgeGroupData.length > 0) && (
+            <section>
+              <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wider mb-3">● Núcleo duro — desagregación por sexo y edad</p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {a.ndSexoData.length > 0 && (
+                  <PieChartComponent
+                    data={a.ndSexoData} dataKey="value" nameKey="name"
+                    title="Distribución por sexo — Núcleo duro"
+                  />
+                )}
+                {a.ndAgeGroupData.length > 0 && (
+                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-5">Grupos etarios por sexo — Núcleo duro</h3>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart data={a.ndAgeGroupData} margin={{ top: 4, right: 16, left: 0, bottom: 16 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false}
+                          tickFormatter={(v: number) => v.toLocaleString("es-AR")} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: 12 }}
+                          formatter={(v: number) => [v.toLocaleString("es-AR"), ""]}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                        <Bar dataKey="M" name="Masculino" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                        <Bar dataKey="F" name="Femenino"  fill="#ec4899" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+            </section>
           )}
 
           {a.participacionBySeg.length > 0 && (
