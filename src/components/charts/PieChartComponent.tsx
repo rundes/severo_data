@@ -12,6 +12,7 @@ interface Props {
   nameKey: string
   title: string
   showPercent?: boolean
+  caption?: string
 }
 
 type LabelProps = {
@@ -34,7 +35,7 @@ function PctLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: Label
   )
 }
 
-export default function PieChartComponent({ data, dataKey, nameKey, title, showPercent = true }: Props) {
+export default function PieChartComponent({ data, dataKey, nameKey, title, showPercent = true, caption }: Props) {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
       <h3 className="text-sm font-semibold text-gray-700 mb-5">{title}</h3>
@@ -70,6 +71,9 @@ export default function PieChartComponent({ data, dataKey, nameKey, title, showP
           />
         </PieChart>
       </ResponsiveContainer>
+      {caption && (
+        <p className="mt-3 text-xs text-gray-500 border-t border-gray-100 pt-2">{caption}</p>
+      )}
     </div>
   )
 }
