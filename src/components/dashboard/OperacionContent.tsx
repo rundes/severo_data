@@ -34,37 +34,44 @@ export default function OperacionContent({ sheetId }: Props) {
   const [tabCounts, setTabCounts] = useState<Record<string, number>>({})
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [activeTab, setActiveTab] = useState<TabId>("produccion")
+  const [mainTabName, setMainTabName] = useState("")
 
   const [padronTotal, setPadronTotal] = useState<number | null>(null)
   const [padronLoading, setPadronLoading] = useState(false)
   const padronSheetId = process.env.NEXT_PUBLIC_SHEET_PADRON_ID ?? ""
+
+  const setMainTab = useCallback((allData: { title: string; headers: string[]; rows: Row[] }[]) => {
+    const MAIN_RE = /ciudadano|identificac|encuesta|formulario|respuesta|datos?\b/i
+    const main = allData.find(t => MAIN_RE.test(t.title))
+      ?? allData.reduce((a, b) => b.rows.length > a.rows.length ? b : a, allData[0])
+    setMainTabName(main.title)
+    setHeaders(main.headers)
+    setRows(main.rows)
+  }, [])
 
   const load = useCallback(async () => {
     if (!accessToken) return
     try {
       setLoading(true); setError(null)
       const tabs = await fetchSheetTabs(sheetId, accessToken)
+
+      // Collect all tab data deterministically (no race condition)
+      const allData = await Promise.all(
+        tabs.map(async tab => {
+          const d = await fetchSheetData(sheetId, `'${tab.title}'!A:ZZ`, accessToken)
+          return { title: tab.title, headers: d.headers, rows: d.rows }
+        })
+      )
+
       const counts: Record<string, number> = {}
-      let cdHeaders: string[] = []
-      let cdRows: Row[] = []
-
-      await Promise.all(tabs.map(async (tab) => {
-        const d = await fetchSheetData(sheetId, `'${tab.title}'!A:ZZ`, accessToken)
-        counts[tab.title] = d.rows.length
-        if (/ciudadano/i.test(tab.title) || (!cdHeaders.length)) {
-          cdHeaders = d.headers
-          cdRows = d.rows
-        }
-      }))
-
+      allData.forEach(t => { counts[t.title] = t.rows.length })
       setTabCounts(counts)
-      setHeaders(cdHeaders)
-      setRows(cdRows)
+      setMainTab(allData)
       setLastUpdated(new Date())
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error desconocido")
     } finally { setLoading(false) }
-  }, [sheetId, accessToken])
+  }, [sheetId, accessToken, setMainTab])
 
   useEffect(() => { load() }, [load])
 
@@ -128,6 +135,30 @@ export default function OperacionContent({ sheetId }: Props) {
           Actualizar
         </button>
       </div>
+
+      {Object.keys(tabCounts).length > 1 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+          <span className="font-medium">Analizando pestaña:</span>
+          {Object.entries(tabCounts).map(([title, count]) => (
+            <button key={title}
+              onClick={async () => {
+                if (!accessToken) return
+                setLoading(true)
+                try {
+                  const d = await fetchSheetData(sheetId, `'${title}'!A:ZZ`, accessToken)
+                  setMainTabName(title); setHeaders(d.headers); setRows(d.rows)
+                } finally { setLoading(false) }
+              }}
+              className={`px-2.5 py-1 rounded-lg border transition-colors ${
+                title === mainTabName
+                  ? "bg-sky-600 text-white border-sky-600 font-semibold"
+                  : "border-gray-200 hover:border-sky-300 hover:text-sky-700"
+              }`}>
+              {title} <span className="opacity-70">({(count as number).toLocaleString("es-AR")})</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <KPICard title="Total registros" value={totalRelevamientos} color="#1e3a5f" />

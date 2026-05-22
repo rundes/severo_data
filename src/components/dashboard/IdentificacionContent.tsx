@@ -47,6 +47,7 @@ export default function IdentificacionContent({ sheetId }: Props) {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [selectedBarrio, setSelectedBarrio] = useState("")
   const [activeTab, setActiveTab] = useState<TabId>("resumen")
+  const [allSheetTabs, setAllSheetTabs] = useState<{ title: string; count: number }[]>([])
 
   const [padronRows, setPadronRows]       = useState<Row[]>([])
   const [padronHeaders, setPadronHeaders] = useState<string[]>([])
@@ -61,16 +62,41 @@ export default function IdentificacionContent({ sheetId }: Props) {
     return filterByBarrio(rows, selectedBarrio, iL, iLo, iB)
   }, [rows, headers, selectedBarrio])
 
+  const loadTab = useCallback(async (title: string) => {
+    if (!accessToken) return
+    try {
+      setLoading(true); setError(null)
+      const d = await fetchSheetData(sheetId, `'${title}'!A:ZZ`, accessToken)
+      setTabName(title); setHeaders(d.headers); setRows(d.rows)
+      setLastUpdated(new Date())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error desconocido")
+    } finally { setLoading(false) }
+  }, [sheetId, accessToken])
+
   const load = useCallback(async () => {
     if (!accessToken) return
     try {
       setLoading(true); setError(null)
       const tabs = await fetchSheetTabs(sheetId, accessToken)
-      const ciudTab = tabs.find(t => /ciudadano/i.test(t.title)) ?? tabs[0]
-      if (!ciudTab) throw new Error("No se encontró hoja de Ciudadanos")
-      setTabName(ciudTab.title)
-      const d = await fetchSheetData(sheetId, `'${ciudTab.title}'!A:ZZ`, accessToken)
-      setHeaders(d.headers); setRows(d.rows)
+      if (!tabs.length) throw new Error("El sheet no tiene pestañas")
+
+      // Load all tabs in parallel to compare row counts
+      const allData = await Promise.all(
+        tabs.map(async t => {
+          const d = await fetchSheetData(sheetId, `'${t.title}'!A:ZZ`, accessToken)
+          return { title: t.title, headers: d.headers, rows: d.rows }
+        })
+      )
+
+      setAllSheetTabs(allData.map(t => ({ title: t.title, count: t.rows.length })))
+
+      // Pick: explicit name match → fallback to tab with most rows
+      const CITIZEN_RE = /ciudadano|identificac|encuesta|formulario|respuesta|datos?\b/i
+      const best = allData.find(t => CITIZEN_RE.test(t.title))
+        ?? allData.reduce((a, b) => b.rows.length > a.rows.length ? b : a, allData[0])
+
+      setTabName(best.title); setHeaders(best.headers); setRows(best.rows)
       setLastUpdated(new Date())
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error desconocido")
@@ -233,7 +259,26 @@ export default function IdentificacionContent({ sheetId }: Props) {
 
   if (loading) return <LoadingSpinner label="Cargando identificación electoral..." />
   if (error) return <ErrorState message={error} />
-  if (!a) return null
+
+  if (!a) return (
+    <div className="space-y-4">
+      <h1 className="text-xl font-bold text-gray-900">Identificación Electoral</h1>
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+        <p className="text-sm font-semibold text-amber-800 mb-1">
+          La pestaña <span className="font-mono bg-amber-100 px-1 rounded">{tabName}</span> no tiene datos reconocibles.
+        </p>
+        <p className="text-xs text-amber-700 mb-3">Seleccioná la pestaña correcta:</p>
+        <div className="flex flex-wrap gap-2">
+          {allSheetTabs.map(t => (
+            <button key={t.title} onClick={() => loadTab(t.title)}
+              className="px-3 py-1.5 text-xs bg-white border border-amber-300 rounded-lg hover:bg-amber-50 text-amber-900 font-medium">
+              {t.title} <span className="text-amber-500">({t.count.toLocaleString("es-AR")} filas)</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 
   const RefreshBtn = () => (
     <button onClick={load} className="flex items-center gap-1.5 text-xs text-sky-600 px-3 py-2 rounded-lg hover:bg-sky-50 border border-sky-200 transition-colors">
@@ -257,6 +302,22 @@ export default function IdentificacionContent({ sheetId }: Props) {
         </div>
         <RefreshBtn />
       </div>
+
+      {allSheetTabs.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+          <span className="font-medium">Pestaña:</span>
+          {allSheetTabs.map(t => (
+            <button key={t.title} onClick={() => loadTab(t.title)}
+              className={`px-2.5 py-1 rounded-lg border transition-colors ${
+                t.title === tabName
+                  ? "bg-sky-600 text-white border-sky-600 font-semibold"
+                  : "border-gray-200 hover:border-sky-300 hover:text-sky-700"
+              }`}>
+              {t.title} <span className="opacity-70">({t.count.toLocaleString("es-AR")})</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3">
         <BarrioFilter value={selectedBarrio} onChange={setSelectedBarrio} />
