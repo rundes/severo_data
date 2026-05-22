@@ -133,7 +133,8 @@ export default function IdentificacionContent({ sheetId }: Props) {
     const iDni    = findCol(headers, COL.documento)
     const iFecha  = findCol(headers, COL.fecha)
     const iSexo   = findCol(headers, COL.sexo)
-    const iRelev  = findCol(headers, COL.relevador)
+    const iNombreRelev = findCol(headers, COL.nombreRelevador)
+    const iRelev = iNombreRelev >= 0 ? iNombreRelev : findCol(headers, COL.relevador)
     const total   = filteredRows.length
 
     const p26Counts: Record<string, number> = { SI: 0, NO: 0, DUDOSO: 0, OTRO: 0 }

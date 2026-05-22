@@ -86,10 +86,14 @@ export default function OperacionContent({ sheetId }: Props) {
 
   const analytics = useMemo(() => {
     const iFecha  = findCol(headers, COL.fecha)
-    const iRelev  = findCol(headers, COL.relevador)
     const iBarrio = findCol(headers, COL.barrio)
     const iVoto   = findCol(headers, COL.voto)
     const iDni    = findCol(headers, COL.documento)
+
+    // Prefer "nombre y apellido" column over email/relevador for display
+    const iNombreRelev = findCol(headers, COL.nombreRelevador)
+    const iRelevBase   = findCol(headers, COL.relevador)
+    const iRelev = iNombreRelev >= 0 ? iNombreRelev : iRelevBase
 
     const cargasDia  = iFecha  >= 0 ? timeSeries(rows, iFecha)        : []
     const relevRank  = iRelev  >= 0 ? valueCounts(rows, iRelev,  30)  : []

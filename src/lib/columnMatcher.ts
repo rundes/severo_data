@@ -209,6 +209,7 @@ export const COL = {
   barrio: [/\bP02\b/, /\bbarrio\b/i, /\bzona\b/i, /\blocalidad\b/i],
   fecha: [/timestamp/i, /\bfecha\b/i, /\bdate\b/i, /enviado/i, /creado/i],
   relevador: [/relevad[oa]r?/i, /encuestador/i, /operador/i, /\bmail\b/i, /\bemail\b/i, /responsable/i],
+  nombreRelevador: [/nombre.*apellido/i, /apellido.*nombre/i, /nombre\s*completo/i, /nombre\s*y\s*apell/i, /apell.*y.*nombre/i],
   foto: [/\bfoto/i, /\bimage[nt]/i, /\bimagen/i, /\bfotograf/i, /\bphoto/i, /\bpic\b/i, /\badjunto/i, /\barchivo/i, /drive\.google/i, /upload/i],
 
   // Ciudadanos
