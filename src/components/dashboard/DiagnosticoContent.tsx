@@ -7,6 +7,7 @@ import { findCol, valueCounts, crossTab, detectImageCols, extractImageUrls, COL 
 import KPICard from "@/components/charts/KPICard"
 import PieChartComponent from "@/components/charts/PieChartComponent"
 import StackedBarChart from "@/components/charts/StackedBarChart"
+import HorizontalBarChart from "@/components/charts/HorizontalBarChart"
 import DataTable from "@/components/dashboard/DataTable"
 import ImageGallery from "@/components/dashboard/ImageGallery"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
@@ -68,9 +69,10 @@ export default function DiagnosticoContent({ sheetId }: Props) {
   const iAgua     = findCol(headers, COL.agua)
   const iLuz      = findCol(headers, COL.luz)
   const iGas      = findCol(headers, COL.gas)
-  const iDiscap   = findCol(headers, COL.discapacidad)
-  const iCUD      = findCol(headers, COL.cud)
-  const iTipoDisc = findCol(headers, COL.tipoDiscap)
+  const iDiscap     = findCol(headers, COL.discapacidad)
+  const iCUD        = findCol(headers, COL.cud)
+  const iTipoDisc   = findCol(headers, COL.tipoDiscap)
+  const iPoliticas  = findCol(headers, COL.politicasMunicipio)
 
   const total = rows.length
 
@@ -88,6 +90,23 @@ export default function DiagnosticoContent({ sheetId }: Props) {
   const materialData  = iMaterial >= 0 ? valueCounts(rows, iMaterial) : []
   const escrituraData = iEscritura >= 0 ? valueCounts(rows, iEscritura) : []
   const tipoDiscData  = iTipoDisc >= 0 ? valueCounts(rows, iTipoDisc) : []
+
+  // Políticas/programas municipales — split multi-select (comas)
+  const politicasData: { name: string; value: number }[] = (() => {
+    if (iPoliticas < 0) return []
+    const counts: Record<string, number> = {}
+    rows.forEach(r => {
+      const raw = String(r[iPoliticas] ?? "").trim()
+      if (!raw) return
+      raw.split(/[,;]+/).forEach(item => {
+        const key = item.trim()
+        if (key) counts[key] = (counts[key] ?? 0) + 1
+      })
+    })
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+  })()
 
   // Servicios por barrio
   const cloacaBarrio = (iCloaca >= 0 && iBarrio >= 0) ? serviceByBarrio(rows, iBarrio, iCloaca) : []
@@ -198,6 +217,22 @@ export default function DiagnosticoContent({ sheetId }: Props) {
             <PieChartComponent data={tipoDiscData} dataKey="value" nameKey="name"
               title="● Tipo de discapacidad" />
           )}
+        </section>
+      )}
+
+      {/* ★ Políticas y programas municipales */}
+      {politicasData.length > 0 && (
+        <section>
+          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Políticas/programas del municipio</p>
+          <HorizontalBarChart
+            data={politicasData}
+            color="#0ea5e9"
+            title="★ ¿Qué políticas/programas considera importantes?"
+            subtitle="Respuestas múltiples — cada mención cuenta"
+            badge="★ CORE"
+            total={rows.length}
+            caption={`La política/programa más valorada es "${politicasData[0]?.name}" con ${politicasData[0]?.value.toLocaleString("es-AR")} menciones (${Math.round((politicasData[0]?.value / rows.length) * 100)}% de los encuestados).`}
+          />
         </section>
       )}
 
