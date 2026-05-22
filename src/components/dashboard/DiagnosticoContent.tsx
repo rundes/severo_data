@@ -38,10 +38,10 @@ export default function DiagnosticoContent({ sheetId }: Props) {
     try {
       setLoading(true); setError(null)
       const tabs = await fetchSheetTabs(sheetId, accessToken)
-      const tab = tabs.find(t => /sociohabit/i.test(t.title)) ?? tabs[1] ?? tabs[0]
+      const tab = tabs.find(t => /socio[\s\-_]?habit/i.test(t.title)) ?? tabs[1] ?? tabs[0]
       if (!tab) throw new Error("No se encontró la hoja Sociohabitacional")
       setTabName(tab.title)
-      const d = await fetchSheetData(sheetId, `${tab.title}!A:Z`, accessToken)
+      const d = await fetchSheetData(sheetId, `'${tab.title}'!A:ZZ`, accessToken)
       setHeaders(d.headers); setRows(d.rows)
       setLastUpdated(new Date())
     } catch (e) {

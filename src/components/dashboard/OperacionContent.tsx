@@ -49,7 +49,7 @@ export default function OperacionContent({ sheetId }: Props) {
       let cdRows: Row[] = []
 
       await Promise.all(tabs.map(async (tab) => {
-        const d = await fetchSheetData(sheetId, `${tab.title}!A:Z`, accessToken)
+        const d = await fetchSheetData(sheetId, `'${tab.title}'!A:ZZ`, accessToken)
         counts[tab.title] = d.rows.length
         if (/ciudadano/i.test(tab.title) || (!cdHeaders.length)) {
           cdHeaders = d.headers

@@ -54,7 +54,7 @@ export default function RelevamientoContent({ sheetId }: Props) {
       try {
         setTabLoading(true)
         setTabError(null)
-        const data = await fetchSheetData(sheetId, `${activeTab}!A:Z`, accessToken!)
+        const data = await fetchSheetData(sheetId, `'${activeTab}'!A:ZZ`, accessToken!)
         const cols = analyzeColumns(data.headers, data.rows)
         const charts = proposeCharts(data.headers, data.rows, cols)
         setTabState({ headers: data.headers, rows: data.rows, charts })

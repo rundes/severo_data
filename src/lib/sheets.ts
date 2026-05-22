@@ -11,6 +11,7 @@ export async function fetchSheetData(
   const url = `${SHEETS_BASE}/${spreadsheetId}/values/${encodeURIComponent(range)}`
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
   })
 
   if (!res.ok) {
@@ -48,6 +49,7 @@ export async function fetchSheetTabs(
   const url = `${SHEETS_BASE}/${spreadsheetId}?fields=sheets.properties`
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
   })
 
   if (!res.ok) {
@@ -73,6 +75,7 @@ export async function fetchDriveFolder(
   const url = `${DRIVE_BASE}/files?q=${q}&fields=${fields}&pageSize=100&orderBy=name`
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
   })
 
   if (!res.ok) {
