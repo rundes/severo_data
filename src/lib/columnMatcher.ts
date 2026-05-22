@@ -228,6 +228,7 @@ export const COL = {
   cud: [/\bcud\b/i, /certif.*discap/i],
   tipoDiscap: [/tipo.*discap/i, /discap.*tipo/i],
   escritura: [/escritura/i, /titulo/i, /t[ií]tulo/i],
+  politicasMunicipio: [/pol[ií]tic.*munic/i, /program.*munic/i, /munic.*pol[ií]tic/i, /munic.*program/i, /pol[ií]tic.*program/i],
 
   // Problemáticas
   tipoProblema: [/\btipo\b/i, /categor[ií]a/i, /problem[aá]/i, /reclamo/i],
