@@ -90,10 +90,11 @@ export default function OperacionContent({ sheetId }: Props) {
     const iVoto   = findCol(headers, COL.voto)
     const iDni    = findCol(headers, COL.documento)
 
-    // Prefer "nombre y apellido" column over email/relevador for display
-    const iNombreRelev = findCol(headers, COL.nombreRelevador)
-    const iRelevBase   = findCol(headers, COL.relevador)
-    const iRelev = iNombreRelev >= 0 ? iNombreRelev : iRelevBase
+    // The relevador (surveyor) has a dedicated column. Do NOT fall back to a
+    // generic "nombre y apellido" column: in a relevamiento that holds the
+    // surveyed citizen's name, not the surveyor's. COL.relevador already
+    // prefers relevador/encuestador/operador over an email column.
+    const iRelev = findCol(headers, COL.relevador)
 
     const cargasDia  = iFecha  >= 0 ? timeSeries(rows, iFecha)        : []
     const relevRank  = iRelev  >= 0 ? valueCounts(rows, iRelev,  30)  : []
