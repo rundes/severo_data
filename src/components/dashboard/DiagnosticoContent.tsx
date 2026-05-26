@@ -3,11 +3,15 @@
 import { useEffect, useState, useCallback } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { fetchSheetData, fetchSheetTabs } from "@/lib/sheets"
-import { findCol, valueCounts, crossTab, detectImageCols, extractImageUrls, COL } from "@/lib/columnMatcher"
+import { findCol, findAllCols, valueCounts, crossTab, detectImageCols, extractImageUrls, normalizeVoto, COL } from "@/lib/columnMatcher"
+import { sentimentFrequencies, wordFrequencies, themeCounts } from "@/lib/textAnalysis"
+import { chartColor } from "@/lib/chartTheme"
 import KPICard from "@/components/charts/KPICard"
 import PieChartComponent from "@/components/charts/PieChartComponent"
 import StackedBarChart from "@/components/charts/StackedBarChart"
 import HorizontalBarChart from "@/components/charts/HorizontalBarChart"
+import GroupedBarChart from "@/components/charts/GroupedBarChart"
+import WordCloud from "@/components/charts/WordCloud"
 import DataTable from "@/components/dashboard/DataTable"
 import ImageGallery from "@/components/dashboard/ImageGallery"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
@@ -121,6 +125,47 @@ export default function DiagnosticoContent({ sheetId }: Props) {
 
   const hasServiceData = cloacaBarrio.length > 0 || aguaBarrio.length > 0 || luzBarrio.length > 0 || gasBarrio.length > 0
 
+  const pctOf = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0)
+
+  // ── Intención de voto (¿nos votaría?) ──
+  const iVotaria = findCol(headers, COL.p26)
+  const votoCounts = { SI: 0, NO: 0, DUDOSO: 0, OTRO: 0 }
+  let votoAnswered = 0
+  if (iVotaria >= 0) {
+    rows.forEach(r => {
+      const raw = String(r[iVotaria] ?? "").trim()
+      if (!raw) return
+      votoAnswered++
+      votoCounts[normalizeVoto(raw) as keyof typeof votoCounts]++
+    })
+  }
+
+  // ── Percepción de Maipú: nube de palabras positiva / negativa ──
+  const iDescMaipu = findCol(headers, COL.descripcionMaipu)
+  const maipuSent = iDescMaipu >= 0
+    ? sentimentFrequencies(rows.map(r => r[iDescMaipu]), 30)
+    : { positive: [], negative: [] }
+
+  // ── Mejoras barriales: nube de palabras ──
+  const iMejoras = findCol(headers, COL.mejorasBarriales)
+  const mejorasWords = iMejoras >= 0 ? wordFrequencies(rows.map(r => r[iMejoras]), 45) : []
+
+  // ── Actividades municipales: por tema (% del total) y por grupo etario ──
+  const iActividades = findAllCols(headers, COL.actividadesMunicipales)
+  const ageLabel = (h: string) =>
+    /menor/i.test(h) ? "Menores 18" : /mayor/i.test(h) ? "Mayores 65" : "18 a 65"
+  const actTotal = iActividades.length > 0 ? themeCounts(rows, iActividades) : new Map<string, number>()
+  const actThemeData = [...actTotal.entries()]
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+  const actByAge = iActividades.map(ci => ({ label: ageLabel(headers[ci]), counts: themeCounts(rows, [ci]) }))
+  const actGroupedSeries = actByAge.map((a, i) => ({ key: a.label, label: a.label, color: chartColor(i) }))
+  const actGroupedData = actThemeData.slice(0, 8).map(({ name }) => {
+    const row: { name: string; [k: string]: string | number } = { name }
+    actByAge.forEach(a => { row[a.label] = a.counts.get(name) ?? 0 })
+    return row
+  })
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -138,6 +183,93 @@ export default function DiagnosticoContent({ sheetId }: Props) {
           Actualizar
         </button>
       </div>
+
+      {/* ★ Intención de voto (¿nos votaría?) */}
+      {iVotaria >= 0 && votoAnswered > 0 && (
+        <section>
+          <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Intención de voto (¿nos votaría?)</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <KPICard
+              title="Nos votaría"
+              value={`${pctOf(votoCounts.SI)}%`}
+              subtitle={`${votoCounts.SI.toLocaleString("es-AR")} de ${total.toLocaleString("es-AR")} encuestas`}
+              alert={pctOf(votoCounts.SI) >= 40 ? "ok" : pctOf(votoCounts.SI) >= 25 ? "warn" : "danger"}
+            />
+            <KPICard
+              title="No nos votaría"
+              value={`${pctOf(votoCounts.NO)}%`}
+              subtitle={`${votoCounts.NO.toLocaleString("es-AR")} encuestas`}
+            />
+            <KPICard
+              title="Dudoso"
+              value={`${pctOf(votoCounts.DUDOSO)}%`}
+              subtitle={`${votoCounts.DUDOSO.toLocaleString("es-AR")} a persuadir`}
+            />
+            <KPICard
+              title="Respondieron"
+              value={`${pctOf(votoAnswered)}%`}
+              subtitle={`${votoAnswered.toLocaleString("es-AR")} de ${total.toLocaleString("es-AR")}`}
+            />
+          </div>
+        </section>
+      )}
+
+      {/* ● Percepción de Maipú — nubes de palabras positiva / negativa */}
+      {iDescMaipu >= 0 && (maipuSent.positive.length > 0 || maipuSent.negative.length > 0) && (
+        <section>
+          <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Percepción — ¿Cómo describen a Maipú?</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-surface rounded-md border border-hairline p-5">
+              <h3 className="text-sm font-semibold text-success">Positivo</h3>
+              <p className="text-xs text-ink-3 mb-4">Palabras con carga positiva</p>
+              <WordCloud words={maipuSent.positive} tone="success" emptyLabel="Sin menciones positivas" />
+            </div>
+            <div className="bg-surface rounded-md border border-hairline p-5">
+              <h3 className="text-sm font-semibold text-danger">Negativo</h3>
+              <p className="text-xs text-ink-3 mb-4">Palabras con carga negativa</p>
+              <WordCloud words={maipuSent.negative} tone="danger" emptyLabel="Sin menciones negativas" />
+            </div>
+          </div>
+          <p className="text-xs text-ink-3 mt-3">Clasificación automática por léxico es-AR; las palabras neutrales o no reconocidas se omiten.</p>
+        </section>
+      )}
+
+      {/* ★ Mejoras barriales — nube de palabras */}
+      {iMejoras >= 0 && mejorasWords.length > 0 && (
+        <section>
+          <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Mejoras barriales más pedidas</p>
+          <div className="bg-surface rounded-md border border-hairline p-5">
+            <WordCloud words={mejorasWords} tone="accent" />
+            <p className="text-xs text-ink-3 mt-4 pt-3 border-t border-hairline">
+              Lo más mencionado: <span className="font-semibold text-ink">{mejorasWords[0]?.text}</span> ({mejorasWords[0]?.value.toLocaleString("es-AR")} menciones).
+            </p>
+          </div>
+        </section>
+      )}
+
+      {/* ● Participación en actividades municipales */}
+      {actThemeData.length > 0 && (
+        <section>
+          <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Participación en actividades municipales</p>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <HorizontalBarChart
+              data={actThemeData}
+              title="Actividades por tema"
+              subtitle="% sobre el total de encuestas"
+              total={total}
+              caption={`${actThemeData[0]?.name} es la actividad más mencionada (${pctOf(actThemeData[0]?.value)}% de las encuestas).`}
+            />
+            {actGroupedData.length > 0 && actByAge.length > 1 && (
+              <GroupedBarChart
+                data={actGroupedData}
+                series={actGroupedSeries}
+                title="Participación por grupo etario"
+                subtitle="Menciones por tema y edad"
+              />
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ★ Servicios básicos por barrio — el más fuerte para campaña */}
       {hasServiceData && (

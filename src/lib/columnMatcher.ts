@@ -230,6 +230,10 @@ export const COL = {
   tipoDiscap: [/tipo.*discap/i, /discap.*tipo/i],
   escritura: [/escritura/i, /titulo/i, /t[ií]tulo/i],
   politicasMunicipio: [/pol[ií]tic.*munic/i, /program.*munic/i, /munic.*pol[ií]tic/i, /munic.*program/i, /pol[ií]tic.*program/i],
+  descripcionMaipu: [/descripci[oó]n.*maip/i, /maip.*descripci/i, /c[oó]mo.*maip/i],
+  faltaMaipu: [/falta.*maip/i, /maip.*falta/i],
+  mejorasBarriales: [/mejora.*barrial/i, /barrial.*mejora/i, /mejora.*barrio/i],
+  actividadesMunicipales: [/actividad.*municipal/i, /municipal.*actividad/i],
 
   // Problemáticas
   tipoProblema: [/\btipo\b/i, /categor[ií]a/i, /problem[aá]/i, /reclamo/i],
