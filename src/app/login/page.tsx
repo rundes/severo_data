@@ -39,7 +39,6 @@ export default function LoginPage() {
           </div>
           <p className="text-[0.6875rem] uppercase tracking-wide text-ink-3">Maipú 2025</p>
           <h1 className="text-2xl font-bold text-ink mt-0.5">Severo Dashboard</h1>
-          <p className="text-ink-2 mt-1.5 text-sm">Instrumento de decisión electoral. Ingresá para ver resultados, padrón y relevamiento por barrio.</p>
         </div>
 
         {errorMsg && (
