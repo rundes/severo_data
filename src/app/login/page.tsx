@@ -37,8 +37,7 @@ export default function LoginPage() {
                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <p className="text-[0.6875rem] tracking-wide text-ink-3">Impulsado por cpelectoral.org</p>
-          <h1 className="text-2xl font-bold text-ink mt-0.5">Severo Dashboard</h1>
+          <h1 className="text-2xl font-bold text-ink">Severo Dashboard</h1>
         </div>
 
         {errorMsg && (
@@ -61,7 +60,7 @@ export default function LoginPage() {
         </button>
 
         <p className="text-xs text-ink-3 mt-6 pt-5 border-t border-hairline">
-          Acceso restringido. Solo usuarios autorizados pueden ingresar a este sistema.
+          Impulsado por cpelectoral.org
         </p>
       </div>
     </div>
