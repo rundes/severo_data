@@ -241,6 +241,8 @@ export function exportReport(
 export function normalizaVoto(v: string | number | null): boolean | null {
   if (v === null || v === undefined) return null
   const s = String(v).trim().toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+  // New sheet model: only non-voters get marked, so a dash means the person voted.
+  if (s === "-" || s === "–" || s === "—" || s === "−") return true
   if (["SI", "S", "1", "TRUE", "VOTO", "VOTO SI", "X", "V", "ASISTIO", "CONCURRIO", "EMITIO"].includes(s)) return true
   if (["NO", "N", "0", "FALSE", "NO VOTO", "NO ASISTIO", "AUSENTE"].includes(s)) return false
   return null

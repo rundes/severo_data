@@ -288,6 +288,8 @@ export const COL = {
 export function normalizaParticipacion(v: string | number | null | undefined): boolean | null {
   if (v === null || v === undefined) return null
   const s = String(v).trim().toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+  // New sheet model: only non-voters get marked, so a dash means the person voted.
+  if (s === "-" || s === "–" || s === "—" || s === "−") return true
   if (s === "VOTO" || s === "SI" || s === "1" || s === "TRUE") return true
   if (s === "NO VOTO" || s === "NO" || s === "0" || s === "FALSE") return false
   return null  // "SIN DATO" and others
