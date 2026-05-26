@@ -139,7 +139,7 @@ function fmt(n: number) {
   return (Math.round(n * 100) / 100).toLocaleString("es-AR")
 }
 
-const PALETTE = ["#1e3a5f", "#0ea5e9", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#ec4899", "#06b6d4"]
+const PALETTE = ["#5b50e6", "#3c9bd6", "#0f9b8e", "#e0921a", "#5b50e6", "#d6456a", "#c0497f", "#3c9bd6"]
 
 interface Widget {
   id: string
@@ -295,7 +295,7 @@ function RenderWidget({ w, total }: { w: Widget; total: number }) {
       <BarChartComponent
         data={w.data as Record<string, unknown>[]}
         dataKey="value" nameKey="name"
-        color="#0ea5e9" title={w.title}
+        color="#3c9bd6" title={w.title}
         total={total}
       />
     )
@@ -305,7 +305,7 @@ function RenderWidget({ w, total }: { w: Widget; total: number }) {
       <LineChartComponent
         data={w.data as Record<string, unknown>[]}
         dataKey="value" nameKey="name"
-        color="#0ea5e9" title={w.title}
+        color="#3c9bd6" title={w.title}
       />
     )
   }
@@ -378,15 +378,15 @@ export default function IndicadoresContent({ sheetId }: Props) {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Indicadores</h1>
-          <p className="text-gray-400 text-sm mt-0.5">
+          <h1 className="text-xl font-bold text-ink">Indicadores</h1>
+          <p className="text-ink-3 text-sm mt-0.5">
             {tabs.length} hoja{tabs.length !== 1 ? "s" : ""} · {active.rows.length.toLocaleString("es-AR")} registros · {active.headers.length} columnas
           </p>
           {lastUpdated && (
-            <p className="text-xs text-gray-400 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>
+            <p className="text-xs text-ink-3 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>
           )}
         </div>
-        <button onClick={load} className="flex items-center gap-1.5 text-xs text-sky-600 px-3 py-2 rounded-lg hover:bg-sky-50 border border-sky-200 transition-colors">
+        <button onClick={load} className="flex items-center gap-1.5 text-xs text-accent px-3 py-2 rounded-lg hover:bg-accent-tint border border-hairline transition-colors">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
@@ -401,14 +401,14 @@ export default function IndicadoresContent({ sheetId }: Props) {
             <button
               key={t.tab.id}
               onClick={() => setActiveIdx(i)}
-              className={`px-4 py-2 rounded-xl text-xs font-medium border transition-all ${
+              className={`px-4 py-2 rounded-md text-xs font-medium border transition-all ${
                 i === activeIdx
-                  ? "bg-[#1e3a5f] text-white border-[#1e3a5f] shadow-sm"
-                  : "text-gray-600 border-gray-200 hover:border-sky-300 hover:text-sky-700"
+                  ? "bg-[#5b50e6] text-accent-fg border-[#5b50e6] "
+                  : "text-ink-2 border-hairline hover:border-hairline hover:text-accent"
               }`}
             >
               {t.tab.title}
-              <span className={`ml-1.5 text-[10px] ${i === activeIdx ? "text-blue-200" : "text-gray-400"}`}>
+              <span className={`ml-1.5 text-[10px] ${i === activeIdx ? "text-accent" : "text-ink-3"}`}>
                 {t.rows.length.toLocaleString("es-AR")}
               </span>
             </button>
@@ -419,10 +419,10 @@ export default function IndicadoresContent({ sheetId }: Props) {
       {/* Column summary pills */}
       <div className="flex flex-wrap gap-2">
         {[
-          { label: "Numéricas", count: numCols.length, color: "bg-blue-50 text-blue-700" },
-          { label: "Categóricas", count: catCols.length, color: "bg-green-50 text-green-700" },
-          { label: "Fechas", count: dateCols.length, color: "bg-amber-50 text-amber-700" },
-          { label: "Texto/ID", count: textCols.length, color: "bg-gray-50 text-gray-500" },
+          { label: "Numéricas", count: numCols.length, color: "bg-accent-tint text-accent" },
+          { label: "Categóricas", count: catCols.length, color: "bg-success-tint text-success" },
+          { label: "Fechas", count: dateCols.length, color: "bg-warn-tint text-warn" },
+          { label: "Texto/ID", count: textCols.length, color: "bg-panel text-ink-2" },
         ].filter(p => p.count > 0).map(p => (
           <span key={p.label} className={`text-[10px] font-medium px-2.5 py-1 rounded-full ${p.color}`}>
             {p.count} col. {p.label}
@@ -433,7 +433,7 @@ export default function IndicadoresContent({ sheetId }: Props) {
       {/* KPI cards */}
       {kpiWidget && (
         <section>
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Totales</p>
+          <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Totales</p>
           <RenderWidget w={kpiWidget} total={active.rows.length} />
         </section>
       )}
@@ -441,7 +441,7 @@ export default function IndicadoresContent({ sheetId }: Props) {
       {/* Charts — pairs in grid */}
       {chartWidgets.length > 0 && (
         <section>
-          <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Distribuciones y tendencias</p>
+          <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Distribuciones y tendencias</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {chartWidgets.map(w => (
               <RenderWidget key={w.id} w={w} total={active.rows.length} />
@@ -452,12 +452,12 @@ export default function IndicadoresContent({ sheetId }: Props) {
 
       {/* Column map */}
       <section>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Mapa de columnas detectadas</p>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <p className="text-xs font-semibold text-ink-3 uppercase tracking-wider mb-3">Mapa de columnas detectadas</p>
+        <div className="bg-surface rounded-md border border-hairline overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-gray-50 text-gray-500 text-left">
+                <tr className="bg-panel text-ink-2 text-left">
                   <th className="px-4 py-3 font-medium">#</th>
                   <th className="px-4 py-3 font-medium">Columna</th>
                   <th className="px-4 py-3 font-medium">Tipo detectado</th>
@@ -469,24 +469,24 @@ export default function IndicadoresContent({ sheetId }: Props) {
               </thead>
               <tbody>
                 {active.cols.map((c, i) => (
-                  <tr key={i} className="border-t border-gray-50 hover:bg-gray-50/50">
-                    <td className="px-4 py-2.5 text-gray-400">{i + 1}</td>
-                    <td className="px-4 py-2.5 font-medium text-gray-800">{c.name}</td>
+                  <tr key={i} className="border-t border-hairline hover:bg-panel/50">
+                    <td className="px-4 py-2.5 text-ink-3">{i + 1}</td>
+                    <td className="px-4 py-2.5 font-medium text-ink">{c.name}</td>
                     <td className="px-4 py-2.5">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                        c.type === "number"   ? "bg-blue-50 text-blue-700" :
-                        c.type === "category" ? "bg-green-50 text-green-700" :
-                        c.type === "date"     ? "bg-amber-50 text-amber-700" :
-                        c.type === "id"       ? "bg-purple-50 text-purple-700" :
-                        "bg-gray-50 text-gray-500"
+                        c.type === "number"   ? "bg-accent-tint text-accent" :
+                        c.type === "category" ? "bg-success-tint text-success" :
+                        c.type === "date"     ? "bg-warn-tint text-warn" :
+                        c.type === "id"       ? "bg-accent-tint text-accent" :
+                        "bg-panel text-ink-2"
                       }`}>{c.type}</span>
                     </td>
-                    <td className="px-4 py-2.5 text-right text-gray-500">{c.nonNullCount.toLocaleString("es-AR")}</td>
-                    <td className="px-4 py-2.5 text-right text-gray-500">{c.uniqueCount.toLocaleString("es-AR")}</td>
-                    <td className="px-4 py-2.5 text-right text-gray-500">
+                    <td className="px-4 py-2.5 text-right text-ink-2">{c.nonNullCount.toLocaleString("es-AR")}</td>
+                    <td className="px-4 py-2.5 text-right text-ink-2">{c.uniqueCount.toLocaleString("es-AR")}</td>
+                    <td className="px-4 py-2.5 text-right text-ink-2">
                       {c.type === "number" ? `${fmt(c.sum)} / ${fmt(c.avg)}` : "—"}
                     </td>
-                    <td className="px-4 py-2.5 text-gray-400 max-w-[200px] truncate">
+                    <td className="px-4 py-2.5 text-ink-3 max-w-[200px] truncate">
                       {c.samples.slice(0, 4).join(", ")}
                     </td>
                   </tr>
@@ -499,7 +499,7 @@ export default function IndicadoresContent({ sheetId }: Props) {
 
       {/* Full data table */}
       <section>
-        <h2 className="text-base font-semibold text-gray-700 mb-3">
+        <h2 className="text-base font-semibold text-ink mb-3">
           Datos completos — {active.tab.title}
         </h2>
         <DataTable headers={active.headers} rows={active.rows} />

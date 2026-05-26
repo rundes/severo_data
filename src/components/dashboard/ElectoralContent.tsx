@@ -63,10 +63,10 @@ const MESAS_PIVOTE = [
 ]
 
 const TIPO_COLOR: Record<Tipo, string> = {
-  G: "#1e3a5f",
-  L: "#f59e0b",
-  P: "#10b981",
-  N: "#ef4444",
+  G: "#5b50e6",
+  L: "#e0921a",
+  P: "#0f9b8e",
+  N: "#d6456a",
 }
 
 const TIPO_LABEL: Record<Tipo, string> = {
@@ -81,17 +81,17 @@ function EleccionTooltip({ active, payload }: { active?: boolean; payload?: Arra
   if (!active || !payload?.length) return null
   const d = payload[0].payload as Eleccion
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-lg text-xs max-w-[220px]">
-      <p className="font-bold text-gray-800 mb-1">{d.label} — {TIPO_LABEL[d.tipo]}</p>
-      <p className="text-[#1e3a5f] font-semibold">FP: {d.pct_fp}%</p>
-      <p className="text-gray-500">Opositor ({d.opositor}): {d.pct_op}%</p>
-      <p className="text-gray-500">Participación: {d.pct_part}%</p>
+    <div className="bg-surface border border-hairline rounded-md p-3 shadow-lg text-xs max-w-[220px]">
+      <p className="font-bold text-ink mb-1">{d.label} — {TIPO_LABEL[d.tipo]}</p>
+      <p className="text-[#5b50e6] font-semibold">FP: {d.pct_fp}%</p>
+      <p className="text-ink-2">Opositor ({d.opositor}): {d.pct_op}%</p>
+      <p className="text-ink-2">Participación: {d.pct_part}%</p>
       {d.delta_fp !== null && (
-        <p className={d.delta_fp >= 0 ? "text-green-600" : "text-red-500"}>
+        <p className={d.delta_fp >= 0 ? "text-success" : "text-danger"}>
           Δ vs ant. mismo tipo: {d.delta_fp > 0 ? "+" : ""}{d.delta_fp} pp
         </p>
       )}
-      <p className="text-gray-400 mt-1 leading-tight">{d.resultado}</p>
+      <p className="text-ink-3 mt-1 leading-tight">{d.resultado}</p>
     </div>
   )
 }
@@ -190,31 +190,31 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Análisis Electoral — Maipú</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Serie 2001–2025 · 14 elecciones · 32 mesas</p>
-          <p className="text-xs text-gray-400 mt-1">Fuente: Resultados Maipú Histórico, Comparativo Sep-Oct 2025, Análisis 5ta Sección</p>
+          <h1 className="text-xl font-bold text-ink">Análisis Electoral — Maipú</h1>
+          <p className="text-ink-3 text-sm mt-0.5">Serie 2001–2025 · 14 elecciones · 32 mesas</p>
+          <p className="text-xs text-ink-3 mt-1">Fuente: Resultados Maipú Histórico, Comparativo Sep-Oct 2025, Análisis 5ta Sección</p>
         </div>
       </div>
 
       {/* ★ KPIs Cabecera */}
       <section>
-        <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Estado actual del escenario</p>
+        <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Estado actual del escenario</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <KPICard title="Línea base 2027" value="40,09 %" color="#10b981" subtitle="Provinciales Sep 2025" />
-          <KPICard title="Última nacional" value="33,38 %" color="#f59e0b" subtitle="↓ 6,71 pp vs Sep 2025" />
-          <KPICard title="Pico histórico" value="49,71 %" color="#6b7280" subtitle="2019 Generales" />
-          <KPICard title="Δ Participación Sep→Oct" value="−9,84 pp" color="#ef4444" subtitle="Outlier 5ta Sección" />
-          <KPICard title="Votos a recuperar" value="800" color="#f97316" subtitle="desafectados Oct 2025" />
-          <KPICard title="Padrón habilitado" value="10.312" color="#0ea5e9" subtitle="electores 2025" />
+          <KPICard title="Línea base 2027" value="40,09 %" color="#0f9b8e" subtitle="Provinciales Sep 2025" />
+          <KPICard title="Última nacional" value="33,38 %" color="#e0921a" subtitle="↓ 6,71 pp vs Sep 2025" />
+          <KPICard title="Pico histórico" value="49,71 %" color="#5b6472" subtitle="2019 Generales" />
+          <KPICard title="Δ Participación Sep→Oct" value="−9,84 pp" color="#d6456a" subtitle="Outlier 5ta Sección" />
+          <KPICard title="Votos a recuperar" value="800" color="#e0921a" subtitle="desafectados Oct 2025" />
+          <KPICard title="Padrón habilitado" value="10.312" color="#3c9bd6" subtitle="electores 2025" />
         </div>
       </section>
 
       {/* ★ Serie histórica % FP */}
       <section>
-        <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Serie histórica % FP (2001–2025)</p>
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Serie histórica % FP (2001–2025)</p>
+        <div className="bg-surface rounded-md p-6 border border-hairline">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-            <h3 className="text-sm font-semibold text-gray-700">% Fuerza Patria / PJ por elección</h3>
+            <h3 className="text-sm font-semibold text-ink">% Fuerza Patria / PJ por elección</h3>
             <div className="flex flex-wrap gap-3 text-[10px]">
               {(Object.keys(TIPO_COLOR) as Tipo[]).map(t => (
                 <span key={t} className="flex items-center gap-1.5">
@@ -227,16 +227,16 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
           <ResponsiveContainer width="100%" height={300}>
             <ComposedChart data={ELECCIONES} margin={{ top: 8, right: 12, left: 0, bottom: 48 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} angle={-35} textAnchor="end" interval={0} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 60]} tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#5b6472" }} angle={-35} textAnchor="end" interval={0} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 60]} tick={{ fontSize: 11, fill: "#5b6472" }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
               <Tooltip content={<EleccionTooltip />} />
-              <ReferenceLine y={50} stroke="#10b981" strokeDasharray="4 2" strokeWidth={1.5} label={{ value: "50%", position: "right", fontSize: 10, fill: "#10b981" }} />
-              <ReferenceLine y={40} stroke="#f59e0b" strokeDasharray="4 2" strokeWidth={1} label={{ value: "40%", position: "right", fontSize: 10, fill: "#f59e0b" }} />
-              <ReferenceLine y={avgFpGenerales} stroke="#1e3a5f" strokeDasharray="2 4" strokeWidth={1} label={{ value: `Prom.G ${avgFpGenerales}%`, position: "right", fontSize: 9, fill: "#1e3a5f" }} />
+              <ReferenceLine y={50} stroke="#0f9b8e" strokeDasharray="4 2" strokeWidth={1.5} label={{ value: "50%", position: "right", fontSize: 10, fill: "#0f9b8e" }} />
+              <ReferenceLine y={40} stroke="#e0921a" strokeDasharray="4 2" strokeWidth={1} label={{ value: "40%", position: "right", fontSize: 10, fill: "#e0921a" }} />
+              <ReferenceLine y={avgFpGenerales} stroke="#5b50e6" strokeDasharray="2 4" strokeWidth={1} label={{ value: `Prom.G ${avgFpGenerales}%`, position: "right", fontSize: 9, fill: "#5b50e6" }} />
               <Line
                 type="monotone"
                 dataKey="pct_fp"
-                stroke="#cbd5e1"
+                stroke="#8f897e"
                 strokeWidth={1.5}
                 dot={false}
                 activeDot={false}
@@ -263,9 +263,9 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
               />
             </ComposedChart>
           </ResponsiveContainer>
-          <div className="mt-3 flex flex-wrap gap-4 text-xs text-gray-400 border-t border-gray-50 pt-3">
-            <span>Prom. Generales: <strong className="text-gray-600">{avgFpGenerales}%</strong></span>
-            <span>Prom. Legislativas: <strong className="text-gray-600">{avgFpLegislativas}%</strong></span>
+          <div className="mt-3 flex flex-wrap gap-4 text-xs text-ink-3 border-t border-hairline pt-3">
+            <span>Prom. Generales: <strong className="text-ink-2">{avgFpGenerales}%</strong></span>
+            <span>Prom. Legislativas: <strong className="text-ink-2">{avgFpLegislativas}%</strong></span>
             <span>Puntos marcados = elecciones sobre 40%</span>
           </div>
         </div>
@@ -273,14 +273,14 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
 
       {/* ★ Top 10 mesas pivote */}
       <section>
-        <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Top 10 mesas pivote Sep→Oct 2025</p>
+        <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Top 10 mesas pivote Sep→Oct 2025</p>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* FP chart */}
           <GroupedBarChart
             data={mesasChartFP}
             series={[
-              { key: "Sep", label: "FP Sep 2025", color: "#10b981" },
-              { key: "Oct", label: "FP Oct 2025", color: "#ef4444" },
+              { key: "Sep", label: "FP Sep 2025", color: "#0f9b8e" },
+              { key: "Oct", label: "FP Oct 2025", color: "#d6456a" },
             ]}
             title="★ Votos FP por mesa — Sep vs Oct 2025"
             subtitle="Mesas con mayor caída de votos propios"
@@ -290,8 +290,8 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
           <GroupedBarChart
             data={mesasChartLLA}
             series={[
-              { key: "Sep", label: "LLA Sep 2025", color: "#f59e0b" },
-              { key: "Oct", label: "LLA Oct 2025", color: "#7c3aed" },
+              { key: "Sep", label: "LLA Sep 2025", color: "#e0921a" },
+              { key: "Oct", label: "LLA Oct 2025", color: "#5b50e6" },
             ]}
             title="★ Votos LLA por mesa — Sep vs Oct 2025"
             subtitle="Crecimiento de LLA en las mismas mesas"
@@ -300,44 +300,44 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
         </div>
 
         {/* Mesa table */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mt-6">
-          <div className="px-6 py-4 border-b border-gray-50">
-            <h3 className="text-sm font-semibold text-gray-700">Detalle — Top 10 mesas pivote</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Ordenadas por mayor caída de votos FP entre Sep y Oct 2025</p>
+        <div className="bg-surface rounded-md border border-hairline overflow-hidden mt-6">
+          <div className="px-6 py-4 border-b border-hairline">
+            <h3 className="text-sm font-semibold text-ink">Detalle — Top 10 mesas pivote</h3>
+            <p className="text-xs text-ink-3 mt-0.5">Ordenadas por mayor caída de votos FP entre Sep y Oct 2025</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-gray-50 text-gray-500 text-left">
+                <tr className="bg-panel text-ink-2 text-left">
                   <th className="px-4 py-3 font-medium">#</th>
                   <th className="px-4 py-3 font-medium">Mesa</th>
                   <th className="px-4 py-3 font-medium text-right">FP Sep</th>
                   <th className="px-4 py-3 font-medium text-right">FP Oct</th>
-                  <th className="px-4 py-3 font-medium text-right text-red-500">Δ FP</th>
+                  <th className="px-4 py-3 font-medium text-right text-danger">Δ FP</th>
                   <th className="px-4 py-3 font-medium text-right">LLA Sep</th>
                   <th className="px-4 py-3 font-medium text-right">LLA Oct</th>
-                  <th className="px-4 py-3 font-medium text-right text-purple-500">Δ LLA</th>
+                  <th className="px-4 py-3 font-medium text-right text-accent">Δ LLA</th>
                   <th className="px-4 py-3 font-medium">Tipo</th>
                 </tr>
               </thead>
               <tbody>
                 {MESAS_PIVOTE.map((m, i) => (
-                  <tr key={m.mesa} className="border-t border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3 text-gray-400">{i + 1}</td>
-                    <td className="px-4 py-3 font-medium text-gray-800">{m.mesa}</td>
-                    <td className="px-4 py-3 text-right text-green-600">{m.fp_sep}</td>
-                    <td className="px-4 py-3 text-right text-red-500">{m.fp_oct}</td>
-                    <td className="px-4 py-3 text-right font-bold text-red-600">{m.delta_fp}</td>
-                    <td className="px-4 py-3 text-right text-amber-500">{m.lla_sep}</td>
-                    <td className="px-4 py-3 text-right text-purple-600">{m.lla_oct}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-purple-700">+{m.delta_lla}</td>
+                  <tr key={m.mesa} className="border-t border-hairline hover:bg-panel/50 transition-colors">
+                    <td className="px-4 py-3 text-ink-3">{i + 1}</td>
+                    <td className="px-4 py-3 font-medium text-ink">{m.mesa}</td>
+                    <td className="px-4 py-3 text-right text-success">{m.fp_sep}</td>
+                    <td className="px-4 py-3 text-right text-danger">{m.fp_oct}</td>
+                    <td className="px-4 py-3 text-right font-bold text-danger">{m.delta_fp}</td>
+                    <td className="px-4 py-3 text-right text-warn">{m.lla_sep}</td>
+                    <td className="px-4 py-3 text-right text-accent">{m.lla_oct}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-accent">+{m.delta_lla}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                         m.tipo === "Migración fuerte"
-                          ? "bg-red-100 text-red-700"
+                          ? "bg-danger-tint text-danger"
                           : m.tipo === "Migración"
-                          ? "bg-orange-100 text-orange-700"
-                          : "bg-yellow-100 text-yellow-700"
+                          ? "bg-warn-tint text-warn"
+                          : "bg-warn-tint text-warn"
                       }`}>{m.tipo}</span>
                     </td>
                   </tr>
@@ -350,47 +350,47 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
 
       {/* ● Outlier 5ta Sección */}
       <section>
-        <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Quick Win — Maipú como outlier de la 5ta Sección</p>
+        <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Quick Win — Maipú como outlier de la 5ta Sección</p>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* KPI cards */}
           <div className="space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
-              <p className="text-xs font-bold text-red-600 uppercase tracking-wider mb-3">Alerta — Caída singular de participación</p>
+            <div className="bg-danger-tint border border-hairline rounded-md p-5">
+              <p className="text-xs font-bold text-danger uppercase tracking-wider mb-3">Alerta — Caída singular de participación</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-gray-500">Δ Sep→Oct Maipú</p>
-                  <p className="text-2xl font-bold text-red-600">−9,84 pp</p>
+                  <p className="text-xs text-ink-2">Δ Sep→Oct Maipú</p>
+                  <p className="text-2xl font-bold text-danger">−9,84 pp</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Δ Sep→Oct media 5ta</p>
-                  <p className="text-2xl font-bold text-green-600">+3,71 pp</p>
+                  <p className="text-xs text-ink-2">Δ Sep→Oct media 5ta</p>
+                  <p className="text-2xl font-bold text-success">+3,71 pp</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Diferencial Maipú vs 5ta</p>
-                  <p className="text-xl font-bold text-red-700">−13,55 pp</p>
+                  <p className="text-xs text-ink-2">Diferencial Maipú vs 5ta</p>
+                  <p className="text-xl font-bold text-danger">−13,55 pp</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Ranking caída</p>
-                  <p className="text-xl font-bold text-red-700">1° de 14</p>
-                  <p className="text-xs text-gray-400">peor de la sección</p>
+                  <p className="text-xs text-ink-2">Ranking caída</p>
+                  <p className="text-xl font-bold text-danger">1° de 14</p>
+                  <p className="text-xs text-ink-3">peor de la sección</p>
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-3">
-              <p className="text-xs font-semibold text-gray-700">Participación Maipú vs 5ta Sección</p>
+            <div className="bg-surface rounded-md p-5 border border-hairline space-y-3">
+              <p className="text-xs font-semibold text-ink">Participación Maipú vs 5ta Sección</p>
               <div className="space-y-2">
                 {[
-                  { label: "Sep 2025 — Maipú", val: 70.03, color: "#10b981" },
-                  { label: "Sep 2025 — Media 5ta", val: 61.9, color: "#94a3b8" },
-                  { label: "Oct 2025 — Maipú", val: 60.11, color: "#ef4444" },
-                  { label: "Oct 2025 — Media 5ta", val: 65.6, color: "#94a3b8" },
+                  { label: "Sep 2025 — Maipú", val: 70.03, color: "#0f9b8e" },
+                  { label: "Sep 2025 — Media 5ta", val: 61.9, color: "#5b6472" },
+                  { label: "Oct 2025 — Maipú", val: 60.11, color: "#d6456a" },
+                  { label: "Oct 2025 — Media 5ta", val: 65.6, color: "#5b6472" },
                 ].map(item => (
                   <div key={item.label}>
                     <div className="flex justify-between text-xs mb-0.5">
-                      <span className="text-gray-600">{item.label}</span>
+                      <span className="text-ink-2">{item.label}</span>
                       <span className="font-semibold" style={{ color: item.color }}>{item.val}%</span>
                     </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-2 bg-panel rounded-full overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${item.val}%`, backgroundColor: item.color }} />
                     </div>
                   </div>
@@ -400,27 +400,27 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
           </div>
 
           {/* Ranking distritos */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-700 mb-1">Δ Participación Sep→Oct 2025 por distrito</h3>
-            <p className="text-xs text-gray-400 mb-5">Distritos que cayeron vs media 5ta</p>
+          <div className="bg-surface rounded-md p-6 border border-hairline">
+            <h3 className="text-sm font-semibold text-ink mb-1">Δ Participación Sep→Oct 2025 por distrito</h3>
+            <p className="text-xs text-ink-3 mb-5">Distritos que cayeron vs media 5ta</p>
             <div className="space-y-2.5">
               {DELTA_RANKING.map(d => (
                 <div key={d.name}>
                   <div className="flex justify-between text-xs mb-0.5">
-                    <span className={`font-medium ${d.name === "Maipú" ? "text-red-600" : d.name === "Media 5ta" ? "text-green-600" : "text-gray-600"}`}>
+                    <span className={`font-medium ${d.name === "Maipú" ? "text-danger" : d.name === "Media 5ta" ? "text-success" : "text-ink-2"}`}>
                       {d.name}
-                      {d.name === "Maipú" && <span className="ml-1.5 text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">OUTLIER</span>}
+                      {d.name === "Maipú" && <span className="ml-1.5 text-[9px] bg-danger-tint text-danger px-1.5 py-0.5 rounded-full">OUTLIER</span>}
                     </span>
-                    <span className={`font-bold ${d.value < 0 ? "text-red-500" : "text-green-600"}`}>
+                    <span className={`font-bold ${d.value < 0 ? "text-danger" : "text-success"}`}>
                       {d.value > 0 ? "+" : ""}{d.value} pp
                     </span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-panel rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full"
                       style={{
                         width: `${Math.abs(d.value) / 10 * 100}%`,
-                        backgroundColor: d.value < 0 ? (d.name === "Maipú" ? "#ef4444" : "#f97316") : "#10b981",
+                        backgroundColor: d.value < 0 ? (d.name === "Maipú" ? "#d6456a" : "#e0921a") : "#0f9b8e",
                       }}
                     />
                   </div>
@@ -433,57 +433,57 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
 
       {/* ◆ Tendencias largo plazo */}
       <section>
-        <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider mb-3">◆ Avanzado — Tendencias largo plazo (2001–2025)</p>
+        <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">◆ Avanzado — Tendencias largo plazo (2001–2025)</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-          <KPICard title="Prom. % FP Generales" value={`${avgFpGenerales}%`} color="#1e3a5f" subtitle="2003–2023" />
-          <KPICard title="Prom. % FP Legislativas" value={`${avgFpLegislativas}%`} color="#f59e0b" subtitle="2005–2021" />
-          <KPICard title="Volatilidad (σ) 2015–2025" value="≈ 9 pp" color="#8b5cf6" subtitle="Alta variabilidad" />
-          <KPICard title="Participación prom. 2001–2023" value="80,9%" color="#0ea5e9" subtitle="vs 65,1% en 2025" />
-          <KPICard title="Caída votos válidos 2023→Oct25" value="−2.283" color="#ef4444" subtitle="8.130 → 5.847 votos" />
-          <KPICard title="Tendencia UCR/SOMOS" value="−18,97 pp" color="#6b7280" subtitle="de 57,69% (2015) a 38,72% (2025)" />
-          <KPICard title="SOMOS en nacionales Oct 25" value="0%" color="#94a3b8" subtitle="Ausencia de oferta" />
-          <KPICard title="Brecha G vs L (FP)" value="+8 pp" color="#10b981" subtitle="Generales siempre más altas" />
+          <KPICard title="Prom. % FP Generales" value={`${avgFpGenerales}%`} color="#5b50e6" subtitle="2003–2023" />
+          <KPICard title="Prom. % FP Legislativas" value={`${avgFpLegislativas}%`} color="#e0921a" subtitle="2005–2021" />
+          <KPICard title="Volatilidad (σ) 2015–2025" value="≈ 9 pp" color="#5b50e6" subtitle="Alta variabilidad" />
+          <KPICard title="Participación prom. 2001–2023" value="80,9%" color="#3c9bd6" subtitle="vs 65,1% en 2025" />
+          <KPICard title="Caída votos válidos 2023→Oct25" value="−2.283" color="#d6456a" subtitle="8.130 → 5.847 votos" />
+          <KPICard title="Tendencia UCR/SOMOS" value="−18,97 pp" color="#5b6472" subtitle="de 57,69% (2015) a 38,72% (2025)" />
+          <KPICard title="SOMOS en nacionales Oct 25" value="0%" color="#5b6472" subtitle="Ausencia de oferta" />
+          <KPICard title="Brecha G vs L (FP)" value="+8 pp" color="#0f9b8e" subtitle="Generales siempre más altas" />
         </div>
 
         {/* Participación histórica */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-700 mb-5">% Participación por elección — Maipú 2001–2025</h3>
+        <div className="bg-surface rounded-md p-6 border border-hairline">
+          <h3 className="text-sm font-semibold text-ink mb-5">% Participación por elección — Maipú 2001–2025</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={ELECCIONES} margin={{ top: 4, right: 12, left: 0, bottom: 48 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} angle={-35} textAnchor="end" interval={0} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#5b6472" }} angle={-35} textAnchor="end" interval={0} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: "#5b6472" }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
               <Tooltip
                 contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: 12 }}
                 formatter={(v: number) => [`${v}%`, "Participación"]}
               />
-              <ReferenceLine y={80.9} stroke="#0ea5e9" strokeDasharray="4 2" label={{ value: "Prom. histórico 80,9%", position: "right", fontSize: 9, fill: "#0ea5e9" }} />
+              <ReferenceLine y={80.9} stroke="#3c9bd6" strokeDasharray="4 2" label={{ value: "Prom. histórico 80,9%", position: "right", fontSize: 9, fill: "#3c9bd6" }} />
               <Bar dataKey="pct_part" radius={[3, 3, 0, 0]}>
                 {ELECCIONES.map((e, i) => (
                   <Cell key={i} fill={
-                    e.pct_part < 65 ? "#ef4444" : e.pct_part < 75 ? "#f59e0b" : "#0ea5e9"
+                    e.pct_part < 65 ? "#d6456a" : e.pct_part < 75 ? "#e0921a" : "#3c9bd6"
                   } />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-          <p className="text-xs text-gray-400 mt-3">Rojo = participación baja (&lt;65%) · Amarillo = media (&lt;75%) · Azul = alta (≥75%)</p>
+          <p className="text-xs text-ink-3 mt-3">Rojo = participación baja (&lt;65%) · Amarillo = media (&lt;75%) · Azul = alta (≥75%)</p>
         </div>
       </section>
 
       {/* ★ Tabla maestra de elecciones */}
       <section>
-        <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Tabla maestra de elecciones 2001–2025</p>
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Tabla maestra de elecciones 2001–2025</p>
+        <div className="bg-surface rounded-md border border-hairline overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-gray-50 text-gray-500 text-left">
+                <tr className="bg-panel text-ink-2 text-left">
                   <th className="px-4 py-3 font-medium">Año</th>
                   <th className="px-4 py-3 font-medium">Tipo</th>
                   <th className="px-4 py-3 font-medium text-right">Padrón</th>
                   <th className="px-4 py-3 font-medium text-right">% Part.</th>
-                  <th className="px-4 py-3 font-medium text-right text-[#1e3a5f]">% FP</th>
+                  <th className="px-4 py-3 font-medium text-right text-[#5b50e6]">% FP</th>
                   <th className="px-4 py-3 font-medium text-right">% Opositor</th>
                   <th className="px-4 py-3 font-medium">Principal opositor</th>
                   <th className="px-4 py-3 font-medium text-right">Δ FP vs ant.</th>
@@ -492,10 +492,10 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
               </thead>
               <tbody>
                 {ELECCIONES.map((e, i) => (
-                  <tr key={i} className={`border-t border-gray-50 hover:bg-gray-50/50 transition-colors ${
-                    e.pct_fp >= 40 ? "bg-green-50/30" : ""
+                  <tr key={i} className={`border-t border-hairline hover:bg-panel/50 transition-colors ${
+                    e.pct_fp >= 40 ? "bg-success-tint/30" : ""
                   }`}>
-                    <td className="px-4 py-3 font-bold text-gray-800">{e.label}</td>
+                    <td className="px-4 py-3 font-bold text-ink">{e.label}</td>
                     <td className="px-4 py-3">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-medium" style={{
                         backgroundColor: TIPO_COLOR[e.tipo] + "22",
@@ -504,19 +504,19 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
                         {TIPO_LABEL[e.tipo]}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-500">{e.padron.toLocaleString("es-AR")}</td>
-                    <td className="px-4 py-3 text-right text-gray-600">{e.pct_part}%</td>
+                    <td className="px-4 py-3 text-right text-ink-2">{e.padron.toLocaleString("es-AR")}</td>
+                    <td className="px-4 py-3 text-right text-ink-2">{e.pct_part}%</td>
                     <td className="px-4 py-3 text-right font-bold" style={{ color: TIPO_COLOR[e.tipo] }}>{e.pct_fp}%</td>
-                    <td className="px-4 py-3 text-right text-gray-500">{e.pct_op}%</td>
-                    <td className="px-4 py-3 text-gray-500">{e.opositor}</td>
+                    <td className="px-4 py-3 text-right text-ink-2">{e.pct_op}%</td>
+                    <td className="px-4 py-3 text-ink-2">{e.opositor}</td>
                     <td className="px-4 py-3 text-right">
                       {e.delta_fp !== null ? (
-                        <span className={`font-semibold ${e.delta_fp >= 0 ? "text-green-600" : "text-red-500"}`}>
+                        <span className={`font-semibold ${e.delta_fp >= 0 ? "text-success" : "text-danger"}`}>
                           {e.delta_fp > 0 ? "+" : ""}{e.delta_fp} pp
                         </span>
-                      ) : <span className="text-gray-300">—</span>}
+                      ) : <span className="text-ink-4">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[180px]">{e.resultado}</td>
+                    <td className="px-4 py-3 text-ink-2 max-w-[180px]">{e.resultado}</td>
                   </tr>
                 ))}
               </tbody>
@@ -528,34 +528,34 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
       {/* Participación real del padrón */}
       {votoSheetId && (
         <section>
-          <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-3">★ Participación real del padrón — datos vivos</p>
+          <p className="text-xs font-semibold text-success uppercase tracking-wider mb-3">★ Participación real del padrón — datos vivos</p>
           {votoLoading && <LoadingSpinner label="Cargando datos de participación..." />}
           {!votoLoading && !votoAnalytics && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-sm text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-5 text-sm text-warn">
               No se detectó columna de voto en el sheet. Verificá que tenga una columna con "voto", "participó", "asistió" o similar.
             </div>
           )}
           {!votoLoading && votoAnalytics && (
             <div className="space-y-5">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <KPICard title="Participación real" value={`${votoAnalytics.pct}%`} color="#10b981" subtitle={`${votoAnalytics.si.toLocaleString("es-AR")} votaron`} />
-                <KPICard title="Ausentismo" value={`${100 - votoAnalytics.pct}%`} color="#ef4444" subtitle={`${votoAnalytics.no.toLocaleString("es-AR")} no votaron`} />
-                <KPICard title="Total con dato" value={votoAnalytics.known.toLocaleString("es-AR")} color="#6b7280" />
-                <KPICard title="Total registros" value={votoAnalytics.total.toLocaleString("es-AR")} color="#0ea5e9" />
+                <KPICard title="Participación real" value={`${votoAnalytics.pct}%`} color="#0f9b8e" subtitle={`${votoAnalytics.si.toLocaleString("es-AR")} votaron`} />
+                <KPICard title="Ausentismo" value={`${100 - votoAnalytics.pct}%`} color="#d6456a" subtitle={`${votoAnalytics.no.toLocaleString("es-AR")} no votaron`} />
+                <KPICard title="Total con dato" value={votoAnalytics.known.toLocaleString("es-AR")} color="#5b6472" />
+                <KPICard title="Total registros" value={votoAnalytics.total.toLocaleString("es-AR")} color="#3c9bd6" />
               </div>
 
               {votoAnalytics.byCirc.length > 0 && (
-                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-4">Participación por circuito (%)</h3>
+                <div className="bg-surface rounded-md p-5 border border-hairline ">
+                  <h3 className="text-sm font-semibold text-ink mb-4">Participación por circuito (%)</h3>
                   <div className="space-y-2">
                     {votoAnalytics.byCirc.map(c => (
                       <div key={c.name}>
                         <div className="flex justify-between text-xs mb-1">
-                          <span className="text-gray-600">{c.name}</span>
-                          <span className={`font-bold ${c.value >= 70 ? "text-green-600" : c.value >= 50 ? "text-amber-500" : "text-red-500"}`}>{c.value}%</span>
+                          <span className="text-ink-2">{c.name}</span>
+                          <span className={`font-bold ${c.value >= 70 ? "text-success" : c.value >= 50 ? "text-warn" : "text-danger"}`}>{c.value}%</span>
                         </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${c.value}%`, backgroundColor: c.value >= 70 ? "#10b981" : c.value >= 50 ? "#f59e0b" : "#ef4444" }} />
+                        <div className="h-2 bg-panel rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${c.value}%`, backgroundColor: c.value >= 70 ? "#0f9b8e" : c.value >= 50 ? "#e0921a" : "#d6456a" }} />
                         </div>
                       </div>
                     ))}
@@ -564,13 +564,13 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
               )}
 
               {votoAnalytics.byMesa.length > 0 && (
-                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-4">Participación por mesa (%) — top {votoAnalytics.byMesa.length}</h3>
+                <div className="bg-surface rounded-md p-5 border border-hairline ">
+                  <h3 className="text-sm font-semibold text-ink mb-4">Participación por mesa (%) — top {votoAnalytics.byMesa.length}</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-72 overflow-y-auto">
                     {votoAnalytics.byMesa.map(m => (
-                      <div key={m.name} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2 text-xs">
-                        <span className="text-gray-600 font-medium">{m.name}</span>
-                        <span className={`font-bold ${m.value >= 70 ? "text-green-600" : m.value >= 50 ? "text-amber-500" : "text-red-500"}`}>{m.value}%</span>
+                      <div key={m.name} className="flex items-center justify-between bg-panel rounded-md px-3 py-2 text-xs">
+                        <span className="text-ink-2 font-medium">{m.name}</span>
+                        <span className={`font-bold ${m.value >= 70 ? "text-success" : m.value >= 50 ? "text-warn" : "text-danger"}`}>{m.value}%</span>
                       </div>
                     ))}
                   </div>
@@ -582,21 +582,21 @@ export default function ElectoralContent({ votoSheetId }: { votoSheetId?: string
       )}
 
       {/* Info derivados */}
-      <section className="bg-sky-50 border border-sky-200 rounded-2xl p-5">
-        <p className="text-xs font-bold text-sky-700 uppercase tracking-wider mb-2">◆ Avanzado — Indicadores derivados (requieren cruce con relevamiento)</p>
-        <p className="text-sm text-sky-800 mb-3">Los indicadores D1–D10 (gap de inteligencia, score de prioridad de mesa, cruce voto × diagnóstico territorial) se activan cuando el relevamiento tenga ≥ 30 encuestas por mesa.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-sky-700">
-          <div className="bg-white/60 rounded-xl p-3">
+      <section className="bg-accent-tint border border-hairline rounded-md p-5">
+        <p className="text-xs font-bold text-accent uppercase tracking-wider mb-2">◆ Avanzado — Indicadores derivados (requieren cruce con relevamiento)</p>
+        <p className="text-sm text-accent mb-3">Los indicadores D1–D10 (gap de inteligencia, score de prioridad de mesa, cruce voto × diagnóstico territorial) se activan cuando el relevamiento tenga ≥ 30 encuestas por mesa.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-accent">
+          <div className="bg-surface/60 rounded-md p-3">
             <p className="font-semibold mb-1">D3 — Gap de inteligencia</p>
-            <p className="text-sky-600">% SI en P26 (encuesta) − % FP real (mesa). Disponible cuando n ≥ 30 por mesa.</p>
+            <p className="text-accent">% SI en P26 (encuesta) − % FP real (mesa). Disponible cuando n ≥ 30 por mesa.</p>
           </div>
-          <div className="bg-white/60 rounded-xl p-3">
+          <div className="bg-surface/60 rounded-md p-3">
             <p className="font-semibold mb-1">D5 — Score de prioridad</p>
-            <p className="text-sky-600">Δ FP Sep→Oct normalizado × % NS-NC encuesta × (1 / cobertura JP). Ranking de 32 mesas.</p>
+            <p className="text-accent">Δ FP Sep→Oct normalizado × % NS-NC encuesta × (1 / cobertura JP). Ranking de 32 mesas.</p>
           </div>
-          <div className="bg-white/60 rounded-xl p-3">
+          <div className="bg-surface/60 rounded-md p-3">
             <p className="font-semibold mb-1">D8–D10 — Cruce territorial</p>
-            <p className="text-sky-600">% FP histórico × problema declarado / tenencia vivienda / servicios. Calibra mensajes por zona.</p>
+            <p className="text-accent">% FP histórico × problema declarado / tenencia vivienda / servicios. Calibra mensajes por zona.</p>
           </div>
         </div>
       </section>

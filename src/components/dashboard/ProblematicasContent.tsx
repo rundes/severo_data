@@ -174,14 +174,14 @@ export default function ProblematicasContent({ sheetId }: Props) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Problemáticas Urbanas</h1>
-          <p className="text-gray-400 text-sm mt-0.5">
+          <h1 className="text-xl font-bold text-ink">Problemáticas Urbanas</h1>
+          <p className="text-ink-3 text-sm mt-0.5">
             Hoja: <span className="font-medium">{tabName}</span> · {total.toLocaleString("es-AR")} registros
-            {selectedBarrio && <span className="text-sky-600"> · {rows.length.toLocaleString("es-AR")} totales</span>}
+            {selectedBarrio && <span className="text-accent"> · {rows.length.toLocaleString("es-AR")} totales</span>}
           </p>
-          {lastUpdated && <p className="text-xs text-gray-400 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
+          {lastUpdated && <p className="text-xs text-ink-3 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
         </div>
-        <button onClick={load} className="flex items-center gap-1.5 text-xs text-sky-600 px-3 py-2 rounded-lg hover:bg-sky-50 border border-sky-200 transition-colors">
+        <button onClick={load} className="flex items-center gap-1.5 text-xs text-accent px-3 py-2 rounded-lg hover:bg-accent-tint border border-hairline transition-colors">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
@@ -189,17 +189,17 @@ export default function ProblematicasContent({ sheetId }: Props) {
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3">
+      <div className="bg-surface rounded-md border border-hairline px-4 py-3">
         <BarrioFilter value={selectedBarrio} onChange={setSelectedBarrio} />
       </div>
 
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-panel rounded-md p-1 w-fit">
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === t.id ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
+              activeTab === t.id ? "bg-surface  text-ink" : "text-ink-2 hover:text-ink"
             }`}
           >
             {t.label}
@@ -211,10 +211,10 @@ export default function ProblematicasContent({ sheetId }: Props) {
       {activeTab === "resumen" && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            <KPICard title="Total problemáticas" value={total} color="#ef4444" />
-            {analytics.topTipo && <KPICard title="Problema más frecuente" value={String(analytics.topTipo)} color="#f59e0b" />}
-            {analytics.topBarrio && <KPICard title="Barrio más afectado" value={String(analytics.topBarrio)} color="#8b5cf6" />}
-            {analytics.avgGravNum !== null && <KPICard title="Gravedad promedio" value={analytics.avgGravNum} color="#ef4444" />}
+            <KPICard title="Total problemáticas" value={total} color="#d6456a" />
+            {analytics.topTipo && <KPICard title="Problema más frecuente" value={String(analytics.topTipo)} color="#e0921a" />}
+            {analytics.topBarrio && <KPICard title="Barrio más afectado" value={String(analytics.topBarrio)} color="#5b50e6" />}
+            {analytics.avgGravNum !== null && <KPICard title="Gravedad promedio" value={analytics.avgGravNum} color="#d6456a" />}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -230,7 +230,7 @@ export default function ProblematicasContent({ sheetId }: Props) {
             {analytics.barrioData.length > 0 && (
               <HorizontalBarChart
                 data={analytics.barrioData}
-                color="#f59e0b"
+                color="#e0921a"
                 title="Problemáticas por barrio"
                 total={total}
                 caption={`"${analytics.barrioData[0]?.name}" concentra el mayor número de problemáticas registradas.`}
@@ -246,14 +246,14 @@ export default function ProblematicasContent({ sheetId }: Props) {
           {analytics.tipoData.length > 0 ? (
             <HorizontalBarChart
               data={analytics.tipoData}
-              color="#ef4444"
+              color="#d6456a"
               title="Todos los tipos de problema"
               badge="★ CORE"
               total={total}
               caption={`${analytics.tipoData.length} tipos distintos. El más frecuente: "${analytics.tipoData[0]?.name}" (${(analytics.tipoData[0]?.value as number)?.toLocaleString("es-AR")} casos, ${(((analytics.tipoData[0]?.value as number) / total) * 100).toFixed(1)}%).`}
             />
           ) : (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-6 text-sm text-warn">
               No se encontró columna de tipo de problema.
             </div>
           )}
@@ -263,7 +263,7 @@ export default function ProblematicasContent({ sheetId }: Props) {
               data={analytics.cadencia}
               dataKey="value"
               nameKey="name"
-              color="#ef4444"
+              color="#d6456a"
               title="Evolución temporal de problemáticas"
               caption={`Pico: ${analytics.cadencia.reduce((p, c) => c.value > p.value ? c : p, analytics.cadencia[0])?.name ?? "—"} con ${analytics.cadencia.reduce((p, c) => c.value > p.value ? c : p, analytics.cadencia[0])?.value ?? 0} registros.`}
             />
@@ -277,7 +277,7 @@ export default function ProblematicasContent({ sheetId }: Props) {
           {analytics.gravByBarrio.length > 0 ? (
             <HorizontalBarChart
               data={analytics.gravByBarrio}
-              color="#ef4444"
+              color="#d6456a"
               title="Gravedad promedio por barrio"
               badge="★ CORE"
               caption={`"${analytics.gravByBarrio[0]?.name}" tiene la mayor gravedad promedio (${analytics.gravByBarrio[0]?.value}).`}
@@ -287,43 +287,43 @@ export default function ProblematicasContent({ sheetId }: Props) {
               data={analytics.gravedadData}
               dataKey="value"
               nameKey="name"
-              color="#ef4444"
+              color="#d6456a"
               title="Distribución de gravedad"
               total={total}
               caption={`Categoría de gravedad más frecuente: "${analytics.gravedadData[0]?.name}".`}
             />
           ) : (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-6 text-sm text-warn">
               No se encontró columna de gravedad.
             </div>
           )}
 
           {analytics.priorityMatrix.length > 0 && (
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 overflow-x-auto">
-              <h3 className="text-sm font-semibold text-gray-700 mb-1">Matriz de prioridad</h3>
-              <p className="text-xs text-gray-400 mb-4">Score = 50% frecuencia + 50% gravedad promedio. Rojo ≥ 70, Amarillo ≥ 40, Verde &lt; 40.</p>
+            <div className="bg-surface rounded-md p-6 border border-hairline overflow-x-auto">
+              <h3 className="text-sm font-semibold text-ink mb-1">Matriz de prioridad</h3>
+              <p className="text-xs text-ink-3 mb-4">Score = 50% frecuencia + 50% gravedad promedio. Rojo ≥ 70, Amarillo ≥ 40, Verde &lt; 40.</p>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left py-2 pr-4 text-gray-500 font-medium">Tipo</th>
-                    <th className="text-right py-2 pr-4 text-gray-500 font-medium">Casos</th>
-                    {analytics.isNumGrav && <th className="text-right py-2 pr-4 text-gray-500 font-medium">Grav. prom.</th>}
-                    <th className="text-right py-2 text-gray-500 font-medium">Score</th>
+                  <tr className="border-b border-hairline">
+                    <th className="text-left py-2 pr-4 text-ink-2 font-medium">Tipo</th>
+                    <th className="text-right py-2 pr-4 text-ink-2 font-medium">Casos</th>
+                    {analytics.isNumGrav && <th className="text-right py-2 pr-4 text-ink-2 font-medium">Grav. prom.</th>}
+                    <th className="text-right py-2 text-ink-2 font-medium">Score</th>
                   </tr>
                 </thead>
                 <tbody>
                   {analytics.priorityMatrix.map(row => (
-                    <tr key={row.tipo} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-2 pr-4 text-gray-700">{row.tipo}</td>
-                      <td className="py-2 pr-4 text-right text-gray-600">{row.count.toLocaleString("es-AR")}</td>
+                    <tr key={row.tipo} className="border-b border-hairline hover:bg-panel">
+                      <td className="py-2 pr-4 text-ink">{row.tipo}</td>
+                      <td className="py-2 pr-4 text-right text-ink-2">{row.count.toLocaleString("es-AR")}</td>
                       {analytics.isNumGrav && (
-                        <td className="py-2 pr-4 text-right text-gray-600">{row.avgGrav ?? "—"}</td>
+                        <td className="py-2 pr-4 text-right text-ink-2">{row.avgGrav ?? "—"}</td>
                       )}
                       <td className="py-2 text-right">
                         <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${
-                          row.score >= 70 ? "bg-red-100 text-red-700" :
-                          row.score >= 40 ? "bg-yellow-100 text-yellow-700" :
-                          "bg-green-100 text-green-700"
+                          row.score >= 70 ? "bg-danger-tint text-danger" :
+                          row.score >= 40 ? "bg-warn-tint text-warn" :
+                          "bg-success-tint text-success"
                         }`}>{row.score}</span>
                       </td>
                     </tr>
@@ -346,7 +346,7 @@ export default function ProblematicasContent({ sheetId }: Props) {
                     key={m}
                     onClick={() => setMapMode(m)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      mapMode === m ? "bg-sky-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      mapMode === m ? "bg-accent text-accent-fg" : "bg-panel text-ink-2 hover:bg-panel"
                     }`}
                   >
                     {m === "scatter" ? "Puntos" : "Calor"}
@@ -362,7 +362,7 @@ export default function ProblematicasContent({ sheetId }: Props) {
               />
             </>
           ) : (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-6 text-sm text-warn">
               <p className="font-medium mb-1">Mapa no disponible</p>
               <p className="text-xs">No se encontraron columnas de coordenadas (lat/lon).</p>
             </div>
@@ -371,7 +371,7 @@ export default function ProblematicasContent({ sheetId }: Props) {
           {analytics.barrioData.length > 0 && (
             <HorizontalBarChart
               data={analytics.barrioData}
-              color="#f59e0b"
+              color="#e0921a"
               title="Distribución territorial por barrio"
               total={total}
             />

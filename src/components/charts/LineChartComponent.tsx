@@ -10,26 +10,27 @@ import {
   ResponsiveContainer,
   Dot,
 } from "recharts"
+import { ACCENT, axisTick, gridStroke, tooltipStyle, tooltipLabelStyle, fmtNumber, SURFACE } from "@/lib/chartTheme"
 
 interface Props {
   data: Record<string, unknown>[]
   dataKey: string
   nameKey: string
-  color: string
+  color?: string
   title: string
   caption?: string
 }
 
-export default function LineChartComponent({ data, dataKey, nameKey, color, title, caption }: Props) {
+export default function LineChartComponent({ data, dataKey, nameKey, color = ACCENT, title, caption }: Props) {
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <h3 className="text-sm font-semibold text-gray-700 mb-5">{title}</h3>
+    <div className="bg-surface rounded-md p-5 border border-hairline">
+      <h3 className="text-sm font-semibold text-ink mb-5">{title}</h3>
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 56 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
           <XAxis
             dataKey={nameKey}
-            tick={{ fontSize: 11, fill: "#94a3b8" }}
+            tick={axisTick}
             angle={-35}
             textAnchor="end"
             interval={0}
@@ -37,31 +38,28 @@ export default function LineChartComponent({ data, dataKey, nameKey, color, titl
             tickLine={false}
           />
           <YAxis
-            tick={{ fontSize: 11, fill: "#94a3b8" }}
+            tick={axisTick}
             axisLine={false}
             tickLine={false}
-            tickFormatter={(v) =>
-              typeof v === "number" ? v.toLocaleString("es-AR") : v
-            }
+            tickFormatter={fmtNumber}
           />
           <Tooltip
-            contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: 12 }}
-            formatter={(v) =>
-              [typeof v === "number" ? v.toLocaleString("es-AR") : v, ""]
-            }
+            contentStyle={tooltipStyle}
+            labelStyle={tooltipLabelStyle}
+            formatter={(v) => [fmtNumber(v), ""]}
           />
           <Line
             type="monotone"
             dataKey={dataKey}
             stroke={color}
             strokeWidth={2.5}
-            dot={<Dot r={4} fill={color} stroke="white" strokeWidth={2} />}
-            activeDot={{ r: 6, stroke: "white", strokeWidth: 2 }}
+            dot={<Dot r={4} fill={color} stroke={SURFACE} strokeWidth={2} />}
+            activeDot={{ r: 6, stroke: SURFACE, strokeWidth: 2 }}
           />
         </LineChart>
       </ResponsiveContainer>
       {caption && (
-        <p className="mt-3 text-xs text-gray-500 border-t border-gray-100 pt-2">{caption}</p>
+        <p className="mt-3 text-xs text-ink-3 border-t border-hairline pt-2">{caption}</p>
       )}
     </div>
   )

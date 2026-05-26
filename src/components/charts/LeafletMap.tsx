@@ -1,6 +1,7 @@
 "use client"
 // This file is loaded dynamically (ssr: false) from LeafletMapWrapper
 import { useEffect, useRef } from "react"
+import { CHART_COLORS, ACCENT } from "@/lib/chartTheme"
 
 interface Point {
   x: number
@@ -21,10 +22,7 @@ interface Props {
   showBarrios?: boolean
 }
 
-const DEFAULT_COLORS = [
-  "#0ea5e9", "#10b981", "#f59e0b", "#ef4444",
-  "#8b5cf6", "#ec4899", "#14b8a6",
-]
+const DEFAULT_COLORS = CHART_COLORS
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || ""
 const BARRIOS_GEOJSON = `${BASE}/barrios-maipu.geojson`
@@ -39,11 +37,11 @@ async function addBarriosLayer(L: any, map: any): Promise<void> {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       filter: (feature: any) => feature.geometry?.type === "Polygon",
       style: {
-        color: "#1e3a5f",
-        weight: 2,
-        opacity: 0.8,
-        fillColor: "#0ea5e9",
-        fillOpacity: 0.08,
+        color: ACCENT,
+        weight: 1.5,
+        opacity: 0.55,
+        fillColor: ACCENT,
+        fillOpacity: 0.05,
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onEachFeature: (feature: any, layer: any) => {
@@ -145,13 +143,13 @@ export default function LeafletMap({
         const maxSize = Math.max(...points.map(p => p.size ?? 1), 1)
 
         points.forEach((p) => {
-          const color = autoColorMap[p.colorKey ?? "default"] ?? "#ef4444"
+          const color = autoColorMap[p.colorKey ?? "default"] ?? ACCENT
           const raw = p.size ?? 1
           const radius = 8 + Math.round((raw / maxSize) * 32)
           const circle = L.circleMarker([p.y, p.x], {
             radius,
             fillColor: color,
-            color: "#fff",
+            color: "#fdfcfa",
             weight: 2,
             fillOpacity: 0.78,
           })
@@ -170,7 +168,7 @@ export default function LeafletMap({
           const LegendControl = L.Control.extend({
             onAdd: () => {
               const div = L.DomUtil.create("div")
-              div.innerHTML = `<div style="background:rgba(255,255,255,0.92);padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.4;box-shadow:0 1px 5px rgba(0,0,0,.2);max-width:200px">${legendItems}</div>`
+              div.innerHTML = `<div style="background:rgba(253,252,250,0.94);color:#3a352f;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.4;box-shadow:0 1px 5px rgba(0,0,0,.2);max-width:200px">${legendItems}</div>`
               return div
             },
           })
@@ -210,7 +208,7 @@ export default function LeafletMap({
                   width:${size}px;height:${size}px;border-radius:50%;
                   background:${color};opacity:0.85;
                   display:flex;align-items:center;justify-content:center;
-                  color:#fff;font-size:11px;font-weight:700;
+                  color:#fdfcfa;font-size:11px;font-weight:700;
                   box-shadow:0 1px 5px rgba(0,0,0,.35);">${count}</div>`,
                 className: "",
                 iconSize: [size, size],
@@ -222,11 +220,11 @@ export default function LeafletMap({
 
         points.forEach((p) => {
           const key = p.colorKey ?? "default"
-          const color = autoColorMap[key] ?? "#0ea5e9"
+          const color = autoColorMap[key] ?? ACCENT
           const marker = L.circleMarker([p.y, p.x], {
             radius: 5,
             fillColor: color,
-            color: "#fff",
+            color: "#fdfcfa",
             weight: 1,
             fillOpacity: 0.85,
           })
@@ -248,7 +246,7 @@ export default function LeafletMap({
           const LegendControl = L.Control.extend({
             onAdd: () => {
               const div = L.DomUtil.create("div")
-              div.innerHTML = `<div style="background:rgba(255,255,255,0.92);padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.4;box-shadow:0 1px 5px rgba(0,0,0,.2);max-width:180px">${legendItems}</div>`
+              div.innerHTML = `<div style="background:rgba(253,252,250,0.94);color:#3a352f;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.4;box-shadow:0 1px 5px rgba(0,0,0,.2);max-width:180px">${legendItems}</div>`
               return div
             },
           })
@@ -273,7 +271,7 @@ export default function LeafletMap({
 
   if (!data.length) {
     return (
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-700">
+      <div className="bg-warn-tint border border-hairline rounded-md p-5 text-sm text-warn">
         Sin datos de coordenadas para el mapa.
       </div>
     )
@@ -282,15 +280,15 @@ export default function LeafletMap({
   const validCount = data.filter(p => p.x !== 0 && p.y !== 0 && !isNaN(p.x) && !isNaN(p.y)).length
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-surface rounded-md border border-hairline overflow-hidden">
       <div className="px-5 pt-4 pb-2 flex items-start justify-between">
         <div>
-          <p className="text-sm font-semibold text-gray-800">{title}</p>
-          {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
-          <p className="text-xs text-gray-400 mt-0.5">{validCount.toLocaleString("es-AR")} puntos</p>
+          <p className="text-sm font-semibold text-ink">{title}</p>
+          {subtitle && <p className="text-xs text-ink-3 mt-0.5">{subtitle}</p>}
+          <p className="text-xs text-ink-3 mt-0.5 tnum">{validCount.toLocaleString("es-AR")} puntos</p>
         </div>
         {badge && (
-          <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">
+          <span className="text-[0.6875rem] font-medium px-2 py-0.5 rounded border border-hairline bg-panel text-ink-2 tracking-wide">
             {badge}
           </span>
         )}

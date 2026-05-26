@@ -57,9 +57,9 @@ export function cleanValueCounts(
 export type Segmento = "nucleoDuro" | "contactableDigital" | "contactableTerritorial" | "persuadible" | "sinAlcance"
 
 export interface SegCols {
-  iCelular: number
-  iEmail: number
-  iRedes: number
+  iCelular: number[]   // all matching celular columns (MAIPU_celular #1, #2, …)
+  iEmail: number[]     // all matching email columns
+  iRedes: number[]     // all matching redes-sociales columns
   iAfil: number
   iDomicilio: number
   iBarrio: number
@@ -67,9 +67,9 @@ export interface SegCols {
 
 function hasDigital(row: Row, cols: SegCols): boolean {
   return (
-    (cols.iCelular >= 0 && hasContactValue(row[cols.iCelular])) ||
-    (cols.iEmail >= 0 && hasContactValue(row[cols.iEmail])) ||
-    (cols.iRedes >= 0 && hasContactValue(row[cols.iRedes]))
+    cols.iCelular.some(i => hasContactValue(row[i])) ||
+    cols.iEmail.some(i => hasContactValue(row[i])) ||
+    cols.iRedes.some(i => hasContactValue(row[i]))
   )
 }
 

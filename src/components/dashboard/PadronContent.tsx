@@ -141,15 +141,15 @@ export default function PadronContent({ sheetId }: Props) {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Padrón Electoral</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Demografía y estructura del padrón de Maipú 2025</p>
-          <p className="text-xs text-gray-400 mt-1">
+          <h1 className="text-xl font-bold text-ink">Padrón Electoral</h1>
+          <p className="text-ink-3 text-sm mt-0.5">Demografía y estructura del padrón de Maipú 2025</p>
+          <p className="text-xs text-ink-3 mt-1">
             {total.toLocaleString("es-AR")} registros
-            {selectedBarrio && <span className="text-sky-600"> · {rows.length.toLocaleString("es-AR")} totales</span>}
+            {selectedBarrio && <span className="text-accent"> · {rows.length.toLocaleString("es-AR")} totales</span>}
             {lastUpdated && ` · ${lastUpdated.toLocaleTimeString("es-AR")}`}
           </p>
         </div>
-        <button onClick={load} className="flex items-center gap-1.5 text-xs text-sky-600 px-3 py-2 rounded-lg hover:bg-sky-50 border border-sky-200 transition-colors">
+        <button onClick={load} className="flex items-center gap-1.5 text-xs text-accent px-3 py-2 rounded-lg hover:bg-accent-tint border border-hairline transition-colors">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
@@ -158,19 +158,19 @@ export default function PadronContent({ sheetId }: Props) {
       </div>
 
       {/* Barrio filter */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3">
+      <div className="bg-surface rounded-md border border-hairline px-4 py-3">
         <BarrioFilter value={selectedBarrio} onChange={setSelectedBarrio} />
       </div>
 
       {/* ★ KPIs demografía */}
       <section>
-        <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Demografía básica</p>
+        <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Demografía básica</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          <KPICard title="Total electores" value={total} color="#1e3a5f" />
-          {avgAge !== null && <KPICard title="Promedio de edad" value={`${avgAge} años`} color="#0ea5e9" />}
-          {ages.length > 0 && <KPICard title="Primer voto (16–18)" value={primerVoto} color="#10b981" subtitle={`${Math.round(primerVoto / total * 100)}% del padrón`} />}
-          {ages.length > 0 && <KPICard title="Adultos mayores (65+)" value={adultMayores} color="#8b5cf6" subtitle={`${Math.round(adultMayores / total * 100)}% del padrón`} />}
-          {iMesa >= 0 && <KPICard title="Electores extranjeros" value={extranjeros} color="#f59e0b" subtitle={`${pctExtr}% — mesa 9001`} />}
+          <KPICard title="Total electores" value={total} color="#5b50e6" />
+          {avgAge !== null && <KPICard title="Promedio de edad" value={`${avgAge} años`} color="#3c9bd6" />}
+          {ages.length > 0 && <KPICard title="Primer voto (16–18)" value={primerVoto} color="#0f9b8e" subtitle={`${Math.round(primerVoto / total * 100)}% del padrón`} />}
+          {ages.length > 0 && <KPICard title="Adultos mayores (65+)" value={adultMayores} color="#5b50e6" subtitle={`${Math.round(adultMayores / total * 100)}% del padrón`} />}
+          {iMesa >= 0 && <KPICard title="Electores extranjeros" value={extranjeros} color="#e0921a" subtitle={`${pctExtr}% — mesa 9001`} />}
         </div>
       </section>
 
@@ -183,7 +183,7 @@ export default function PadronContent({ sheetId }: Props) {
           {ageData.length > 0 && (
             <BarChartComponent
               data={ageData} dataKey="value" nameKey="name"
-              color="#0ea5e9" title="★ Pirámide etaria (cohortes)" total={total}
+              color="#3c9bd6" title="★ Pirámide etaria (cohortes)" total={total}
             />
           )}
         </div>
@@ -192,15 +192,15 @@ export default function PadronContent({ sheetId }: Props) {
       {/* ★ Nativos vs Extranjeros */}
       {origenData.length > 0 && (
         <section>
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Nativos y extranjeros</p>
+          <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Nativos y extranjeros</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <KPICard title="Electores nativos" value={nativos.toLocaleString("es-AR")} color="#1e3a5f" subtitle={`${pctNat}% del padrón`} />
-            <KPICard title="Electores extranjeros" value={extranjeros.toLocaleString("es-AR")} color="#f59e0b" subtitle={`${pctExtr}% — mesa 9001`} />
+            <KPICard title="Electores nativos" value={nativos.toLocaleString("es-AR")} color="#5b50e6" subtitle={`${pctNat}% del padrón`} />
+            <KPICard title="Electores extranjeros" value={extranjeros.toLocaleString("es-AR")} color="#e0921a" subtitle={`${pctExtr}% — mesa 9001`} />
             {extSexoData.find(d => /^[Ff]/i.test(String(d.name))) && (
               <KPICard
                 title="Extranjeras (F)"
                 value={extSexoData.find(d => /^[Ff]/i.test(String(d.name)))?.value ?? 0}
-                color="#ec4899"
+                color="#c0497f"
                 subtitle={`de ${extranjeros} extranjeros`}
               />
             )}
@@ -208,7 +208,7 @@ export default function PadronContent({ sheetId }: Props) {
               <KPICard
                 title="Extranjeros (M)"
                 value={extSexoData.find(d => /^[Mm]/i.test(String(d.name)))?.value ?? 0}
-                color="#0ea5e9"
+                color="#3c9bd6"
                 subtitle={`de ${extranjeros} extranjeros`}
               />
             )}
@@ -219,42 +219,42 @@ export default function PadronContent({ sheetId }: Props) {
               title="★ Nativos vs extranjeros"
             />
             {extSexoData.length > 0 && natSexoData.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-700 mb-5">Distribución por sexo — nativos vs extranjeros</h3>
+              <div className="bg-surface rounded-md p-6 border border-hairline">
+                <h3 className="text-sm font-semibold text-ink mb-5">Distribución por sexo — nativos vs extranjeros</h3>
                 <div className="space-y-6">
                   <div>
-                    <p className="text-xs font-medium text-gray-500 mb-3">Nativos ({nativos.toLocaleString("es-AR")})</p>
+                    <p className="text-xs font-medium text-ink-2 mb-3">Nativos ({nativos.toLocaleString("es-AR")})</p>
                     <div className="space-y-2">
                       {natSexoData.map(d => (
                         <div key={String(d.name)}>
                           <div className="flex justify-between text-xs mb-0.5">
-                            <span className="text-gray-600">{String(d.name)}</span>
-                            <span className="font-semibold text-gray-700">
+                            <span className="text-ink-2">{String(d.name)}</span>
+                            <span className="font-semibold text-ink">
                               {d.value.toLocaleString("es-AR")}
-                              <span className="text-gray-400 font-normal ml-1">({(d.value / nativos * 100).toFixed(1)}%)</span>
+                              <span className="text-ink-3 font-normal ml-1">({(d.value / nativos * 100).toFixed(1)}%)</span>
                             </span>
                           </div>
-                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-[#1e3a5f] rounded-full" style={{ width: `${d.value / nativos * 100}%` }} />
+                          <div className="h-2 bg-panel rounded-full overflow-hidden">
+                            <div className="h-full bg-[#5b50e6] rounded-full" style={{ width: `${d.value / nativos * 100}%` }} />
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-gray-500 mb-3">Extranjeros ({extranjeros.toLocaleString("es-AR")})</p>
+                    <p className="text-xs font-medium text-ink-2 mb-3">Extranjeros ({extranjeros.toLocaleString("es-AR")})</p>
                     <div className="space-y-2">
                       {extSexoData.map(d => (
                         <div key={String(d.name)}>
                           <div className="flex justify-between text-xs mb-0.5">
-                            <span className="text-gray-600">{String(d.name)}</span>
-                            <span className="font-semibold text-gray-700">
+                            <span className="text-ink-2">{String(d.name)}</span>
+                            <span className="font-semibold text-ink">
                               {d.value.toLocaleString("es-AR")}
-                              <span className="text-gray-400 font-normal ml-1">({(d.value / extranjeros * 100).toFixed(1)}%)</span>
+                              <span className="text-ink-3 font-normal ml-1">({(d.value / extranjeros * 100).toFixed(1)}%)</span>
                             </span>
                           </div>
-                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-amber-400 rounded-full" style={{ width: `${d.value / extranjeros * 100}%` }} />
+                          <div className="h-2 bg-panel rounded-full overflow-hidden">
+                            <div className="h-full bg-warn rounded-full" style={{ width: `${d.value / extranjeros * 100}%` }} />
                           </div>
                         </div>
                       ))}
@@ -270,22 +270,22 @@ export default function PadronContent({ sheetId }: Props) {
       {/* ★ Estructura electoral */}
       {mesaData.length > 0 && (
         <section>
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Estructura electoral</p>
+          <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Estructura electoral</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-            {iMesa >= 0 && <KPICard title="Cantidad de mesas" value={mesaData.length} color="#0ea5e9" />}
-            <KPICard title="Promedio x mesa" value={Math.round(total / mesaData.length)} color="#10b981" />
-            <KPICard title="Mesa más grande" value={mesaData[0]?.value ?? 0} color="#f59e0b" subtitle={mesaData[0]?.name} />
+            {iMesa >= 0 && <KPICard title="Cantidad de mesas" value={mesaData.length} color="#3c9bd6" />}
+            <KPICard title="Promedio x mesa" value={Math.round(total / mesaData.length)} color="#0f9b8e" />
+            <KPICard title="Mesa más grande" value={mesaData[0]?.value ?? 0} color="#e0921a" subtitle={mesaData[0]?.name} />
           </div>
           <BarChartComponent
             data={mesaData} dataKey="value" nameKey="name"
-            color="#1e3a5f" title="Electores por mesa" total={total}
+            color="#5b50e6" title="Electores por mesa" total={total}
           />
         </section>
       )}
 
       {estabData.length > 0 && (
         <HorizontalBarChart
-          data={estabData} color="#0ea5e9"
+          data={estabData} color="#3c9bd6"
           title="★ Electores por establecimiento"
           subtitle="Logística de fiscalización"
           total={total}
@@ -295,7 +295,7 @@ export default function PadronContent({ sheetId }: Props) {
       {/* ★ Cobertura JP */}
       {fuerzaData.length > 0 && (
         <section>
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Cobertura padrón JP</p>
+          <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Cobertura padrón JP</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <PieChartComponent
               data={fuerzaData} dataKey="value" nameKey="name"
@@ -316,11 +316,11 @@ export default function PadronContent({ sheetId }: Props) {
       {/* ★ Mapa de calor geográfico */}
       {heatData.length > 0 && (
         <section>
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Geografía</p>
+          <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Geografía</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <KPICard title="Georreferenciados" value={geoRows.length} color="#10b981" subtitle={`${Math.round(geoRows.length / total * 100)}% del padrón`} />
+            <KPICard title="Georreferenciados" value={geoRows.length} color="#0f9b8e" subtitle={`${Math.round(geoRows.length / total * 100)}% del padrón`} />
             {sinGeo !== null && sinGeo > 0 && (
-              <KPICard title="Sin geocodificación" value={sinGeo} color="#ef4444" subtitle={`${Math.round(sinGeo / total * 100)}% — a limpiar`} />
+              <KPICard title="Sin geocodificación" value={sinGeo} color="#d6456a" subtitle={`${Math.round(sinGeo / total * 100)}% — a limpiar`} />
             )}
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -345,7 +345,7 @@ export default function PadronContent({ sheetId }: Props) {
       {/* ● Circuitos */}
       {circData.length > 0 && (
         <HorizontalBarChart
-          data={circData} color="#8b5cf6"
+          data={circData} color="#5b50e6"
           title="● Distribución por circuito"
           badge="● QUICK WIN"
           total={total}
@@ -366,7 +366,7 @@ export default function PadronContent({ sheetId }: Props) {
 
       {/* Tabla completa */}
       <section>
-        <h2 className="text-base font-semibold text-gray-700 mb-3">Datos completos</h2>
+        <h2 className="text-base font-semibold text-ink mb-3">Datos completos</h2>
         <DataTable headers={headers} rows={filteredRows} />
       </section>
     </div>

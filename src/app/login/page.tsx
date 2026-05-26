@@ -27,22 +27,26 @@ export default function LoginPage() {
       : null
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-[#1e3a5f] to-slate-900 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-paper p-4">
+      <div className="bg-surface rounded-md border border-hairline shadow-pop p-10 w-full max-w-md">
         {/* Brand */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-[#1e3a5f] rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
-            <svg className="w-9 h-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+        <div className="mb-8">
+          <div className="w-11 h-11 bg-accent rounded-md mb-5 flex items-center justify-center">
+            <svg className="w-6 h-6 text-accent-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Severo Dashboard</h1>
-          <p className="text-gray-400 mt-1 text-sm">Tableros de información</p>
+          <p className="text-[0.6875rem] uppercase tracking-wide text-ink-3">Maipú 2025</p>
+          <h1 className="text-2xl font-bold text-ink mt-0.5">Severo Dashboard</h1>
+          <p className="text-ink-2 mt-1.5 text-sm">Instrumento de decisión electoral. Ingresá para ver resultados, padrón y relevamiento por barrio.</p>
         </div>
 
         {errorMsg && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm text-center">
+          <div className="mb-6 p-3 bg-danger-tint border border-hairline rounded-md text-danger text-sm flex items-start gap-2">
+            <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
             {errorMsg}
           </div>
         )}
@@ -50,14 +54,15 @@ export default function LoginPage() {
         <button
           onClick={signIn}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 px-6 py-3.5 border border-gray-200 rounded-xl text-gray-700 font-medium hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm disabled:opacity-50"
+          aria-busy={loading}
+          className="w-full flex items-center justify-center gap-3 px-6 py-3 border border-hairline rounded-md text-ink font-medium hover:bg-panel active:bg-panel transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <GoogleIcon />
-          Iniciar sesión con Google
+          {loading ? "Ingresando..." : "Iniciar sesión con Google"}
         </button>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
-          Solo usuarios autorizados pueden acceder a este sistema
+        <p className="text-xs text-ink-3 mt-6 pt-5 border-t border-hairline">
+          Acceso restringido. Solo usuarios autorizados pueden ingresar a este sistema.
         </p>
       </div>
     </div>

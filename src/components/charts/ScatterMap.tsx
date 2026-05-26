@@ -4,6 +4,7 @@ import {
   ScatterChart, Scatter, XAxis, YAxis,
   Tooltip, ResponsiveContainer, Cell,
 } from "recharts"
+import { CHART_COLORS, chartColor, tooltipStyle, tooltipLabelStyle, ACCENT, INK_3 } from "@/lib/chartTheme"
 
 interface Point {
   x: number
@@ -21,13 +22,11 @@ interface Props {
   mode?: "scatter" | "heat"
 }
 
-const DEFAULT_COLORS = ["#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"]
-
 const VOTE_COLOR: Record<string, string> = {
-  SI: "#10b981",
-  NO: "#ef4444",
-  DUDOSO: "#f59e0b",
-  OTRO: "#94a3b8",
+  SI: CHART_COLORS[2],     // teal
+  NO: CHART_COLORS[3],     // rose
+  DUDOSO: CHART_COLORS[1], // amber
+  OTRO: CHART_COLORS[7],   // slate
 }
 
 // Bin points into a grid and return density per cell (0–1 normalized)
@@ -104,28 +103,24 @@ export default function ScatterMap({ data, title, subtitle, badge, colorMap, mod
 
   const keys = [...new Set(data.map((d) => d.colorKey ?? "").filter(Boolean))]
   const getColor = (key?: string) => {
-    if (!key) return "#0ea5e9"
+    if (!key) return ACCENT
     if (colorMap?.[key]) return colorMap[key]
     if (VOTE_COLOR[key.toUpperCase()]) return VOTE_COLOR[key.toUpperCase()]
-    return DEFAULT_COLORS[keys.indexOf(key) % DEFAULT_COLORS.length]
+    return chartColor(keys.indexOf(key))
   }
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+    <div className="bg-surface rounded-md p-5 border border-hairline">
       <div className="flex items-start justify-between mb-2">
         <div>
-          <h3 className="text-sm font-semibold text-gray-700">{title}</h3>
-          {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+          <h3 className="text-sm font-semibold text-ink">{title}</h3>
+          {subtitle && <p className="text-xs text-ink-3 mt-0.5">{subtitle}</p>}
         </div>
         {badge && (
-          <span className={`text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${
-            badge.startsWith("★") ? "bg-red-50 text-red-600" :
-            badge.startsWith("●") ? "bg-sky-50 text-sky-600" :
-            "bg-purple-50 text-purple-600"
-          }`}>{badge}</span>
+          <span className="text-[0.6875rem] font-medium px-2 py-0.5 rounded border border-hairline bg-panel text-ink-2 tracking-wide whitespace-nowrap flex-shrink-0">{badge}</span>
         )}
       </div>
-      <p className="text-xs text-gray-300 mb-3">
+      <p className="text-xs text-ink-4 mb-3">
         {mode === "heat"
           ? "Mapa de calor — densidad de electores georreferenciados"
           : "Visualización de coordenadas lat/lon — norte arriba"}
@@ -133,13 +128,13 @@ export default function ScatterMap({ data, title, subtitle, badge, colorMap, mod
 
       {mode === "heat" && (
         <div className="flex items-center gap-1 mb-3">
-          <span className="text-[10px] text-gray-400 mr-1">Densidad:</span>
+          <span className="text-[10px] text-ink-3 mr-1">Densidad:</span>
           {["Baja", "Media", "Alta", "Máx."].map((l, i) => (
             <div key={l} className="flex items-center gap-1">
               <div className="w-4 h-3 rounded-sm" style={{
                 background: heatColor([0.1, 0.35, 0.65, 0.9][i])
               }} />
-              <span className="text-[10px] text-gray-400">{l}</span>
+              <span className="text-[10px] text-ink-3">{l}</span>
             </div>
           ))}
         </div>
@@ -150,7 +145,7 @@ export default function ScatterMap({ data, title, subtitle, badge, colorMap, mod
           {keys.map((k) => (
             <div key={k} className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getColor(k) }} />
-              <span className="text-xs text-gray-500">{k}</span>
+              <span className="text-xs text-ink-2">{k}</span>
             </div>
           ))}
         </div>
@@ -161,12 +156,13 @@ export default function ScatterMap({ data, title, subtitle, badge, colorMap, mod
           <ResponsiveContainer width="100%" height={320}>
             <ScatterChart margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
               <XAxis dataKey="x" type="number" domain={["auto", "auto"]}
-                tick={{ fontSize: 9, fill: "#cbd5e1" }} axisLine={false} tickLine={false} />
+                tick={{ fontSize: 9, fill: INK_3 }} axisLine={false} tickLine={false} />
               <YAxis dataKey="y" type="number" domain={["auto", "auto"]}
-                tick={{ fontSize: 9, fill: "#cbd5e1" }} axisLine={false} tickLine={false} />
+                tick={{ fontSize: 9, fill: INK_3 }} axisLine={false} tickLine={false} />
               <Tooltip
                 cursor={{ strokeDasharray: "3 3" }}
-                contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: 11 }}
+                contentStyle={tooltipStyle}
+                labelStyle={tooltipLabelStyle}
                 formatter={(_, name, props) => [props.payload.label ?? "", name]}
               />
               {/* Invisible scatter just to set axis domain */}
@@ -183,7 +179,7 @@ export default function ScatterMap({ data, title, subtitle, badge, colorMap, mod
                 data={data}
                 shape={(props: { cx?: number; cy?: number }) => {
                   const { cx = 0, cy = 0 } = props
-                  return <circle cx={cx} cy={cy} r={5} fill="#1e3a5f" opacity={0.12} />
+                  return <circle cx={cx} cy={cy} r={5} fill={ACCENT} opacity={0.12} />
                 }}
               />
             </ScatterChart>
@@ -193,12 +189,13 @@ export default function ScatterMap({ data, title, subtitle, badge, colorMap, mod
         <ResponsiveContainer width="100%" height={300}>
           <ScatterChart margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
             <XAxis dataKey="x" type="number" name="Longitud" domain={["auto", "auto"]}
-              tick={{ fontSize: 9, fill: "#cbd5e1" }} axisLine={false} tickLine={false} />
+              tick={{ fontSize: 9, fill: INK_3 }} axisLine={false} tickLine={false} />
             <YAxis dataKey="y" type="number" name="Latitud" domain={["auto", "auto"]}
-              tick={{ fontSize: 9, fill: "#cbd5e1" }} axisLine={false} tickLine={false} />
+              tick={{ fontSize: 9, fill: INK_3 }} axisLine={false} tickLine={false} />
             <Tooltip
               cursor={{ strokeDasharray: "3 3" }}
-              contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: 11 }}
+              contentStyle={tooltipStyle}
+                labelStyle={tooltipLabelStyle}
               formatter={(_, name, props) => [props.payload.label ?? "", name]}
             />
             <Scatter data={data} opacity={0.6}>

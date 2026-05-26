@@ -4,22 +4,100 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design tokens (see DESIGN.md) ─────────────────────────────── */
+:root {
+  /* Warm-paper neutrals */
+  --paper: oklch(0.985 0.004 85);
+  --surface: oklch(0.997 0.003 85);
+  --panel: oklch(0.965 0.006 85);
+  --ink: oklch(0.255 0.008 75);
+  --ink-2: oklch(0.46 0.01 75);
+  --ink-3: oklch(0.62 0.012 75);
+  --ink-4: oklch(0.74 0.01 75);
+  --hairline: oklch(0.915 0.006 80);
+  --hairline-strong: oklch(0.86 0.008 80);
+
+  /* Committed indigo-violet accent */
+  --accent: oklch(0.53 0.205 287);
+  --accent-hover: oklch(0.47 0.215 287);
+  --accent-active: oklch(0.43 0.20 287);
+  --accent-fg: oklch(0.99 0.01 287);
+  --accent-tint: oklch(0.955 0.03 287);
+  --accent-tint-strong: oklch(0.91 0.055 287);
+  --accent-ring: oklch(0.62 0.18 287 / 0.4);
+
+  /* Semantic (always paired with icon + label) */
+  --success: oklch(0.6 0.13 160);
+  --success-tint: oklch(0.95 0.04 160);
+  --warn: oklch(0.72 0.15 70);
+  --warn-tint: oklch(0.95 0.05 75);
+  --danger: oklch(0.56 0.2 25);
+  --danger-tint: oklch(0.95 0.04 25);
+
+  --shadow-pop: 0 1px 2px oklch(0.4 0.02 75 / 0.04), 0 8px 24px oklch(0.4 0.02 75 / 0.08);
+}
+
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+  }
+  /* Numbers align in columns everywhere they appear */
+  th, td, input, table { font-variant-numeric: tabular-nums; }
+
+  ::selection {
+    background: var(--accent-tint-strong);
+    color: var(--ink);
+  }
+
+  /* Accent focus ring for keyboard users */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 }
 
-/* Leaflet barrio label tooltip */
+@layer utilities {
+  .tnum { font-variant-numeric: tabular-nums; }
+}
+
+/* Quiet scrollbars that match the paper */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline-strong) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: var(--hairline-strong);
+  border-radius: 999px;
+  border: 3px solid var(--paper);
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
+
+/* Leaflet barrio label tooltip, retinted to the system */
 .barrio-label {
-  background: rgba(30, 58, 95, 0.85);
+  background: var(--ink);
   border: none;
-  border-radius: 4px;
-  color: #fff;
+  border-radius: 5px;
+  color: var(--accent-fg);
   font-size: 11px;
   font-weight: 600;
-  padding: 2px 6px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  padding: 2px 7px;
+  box-shadow: var(--shadow-pop);
   white-space: nowrap;
 }
 .barrio-label::before { display: none; }
+
+/* Respect reduced-motion globally */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -11,13 +11,13 @@ interface Props {
 export default function BarrioFilter({ value, onChange, className = "" }: Props) {
   return (
     <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
-      <span className="text-xs font-medium text-gray-500 mr-1 shrink-0">Barrio:</span>
+      <span className="text-xs font-medium text-ink-3 mr-1 shrink-0">Barrio:</span>
       <button
         onClick={() => onChange("")}
-        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
+        className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors border ${
           !value
-            ? "bg-sky-600 text-white border-sky-600"
-            : "bg-white text-gray-600 border-gray-200 hover:border-sky-300 hover:text-sky-700"
+            ? "bg-accent text-accent-fg border-accent"
+            : "bg-surface text-ink-2 border-hairline hover:border-accent hover:text-accent"
         }`}
       >
         Todos
@@ -26,10 +26,10 @@ export default function BarrioFilter({ value, onChange, className = "" }: Props)
         <button
           key={name}
           onClick={() => onChange(name === value ? "" : name)}
-          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
+          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors border ${
             value === name
-              ? "bg-sky-600 text-white border-sky-600"
-              : "bg-white text-gray-600 border-gray-200 hover:border-sky-300 hover:text-sky-700"
+              ? "bg-accent text-accent-fg border-accent"
+              : "bg-surface text-ink-2 border-hairline hover:border-accent hover:text-accent"
           }`}
         >
           {name.replace(/^Barrio\s+/i, "")}

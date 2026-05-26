@@ -22,8 +22,8 @@ interface Props {
 const LeafletMap = dynamic(() => import("./LeafletMap"), {
   ssr: false,
   loading: () => (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="flex items-center justify-center h-[420px] text-gray-400 text-sm">
+    <div className="bg-surface rounded-md border border-hairline overflow-hidden">
+      <div className="flex items-center justify-center h-[420px] text-ink-3 text-sm">
         Cargando mapa...
       </div>
     </div>

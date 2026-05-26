@@ -73,23 +73,23 @@ export default function RelevamientoContent({ sheetId }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">Relevamiento</h1>
-        <p className="text-gray-400 text-sm mt-0.5">
+        <h1 className="text-xl font-bold text-ink">Relevamiento</h1>
+        <p className="text-ink-3 text-sm mt-0.5">
           {tabs.length} pestañas disponibles
         </p>
       </div>
 
       {/* Tab Navigation */}
       <div className="overflow-x-auto pb-px">
-        <div className="flex gap-1 border-b border-gray-200 min-w-max">
+        <div className="flex gap-1 border-b border-hairline min-w-max">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.title)}
               className={`px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 -mb-px transition-all whitespace-nowrap ${
                 activeTab === tab.title
-                  ? "border-sky-500 text-sky-600 bg-sky-50"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                  ? "border-hairline text-accent bg-accent-tint"
+                  : "border-transparent text-ink-2 hover:text-ink hover:bg-panel"
               }`}
             >
               {tab.title}
@@ -113,12 +113,12 @@ export default function RelevamientoContent({ sheetId }: Props) {
 function TabContent({ state, tabName }: { state: TabState; tabName: string }) {
   return (
     <div className="space-y-6">
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-ink-3">
         {state.rows.length.toLocaleString("es-AR")} registros en &ldquo;{tabName}&rdquo;
       </p>
 
       {state.charts.length === 0 ? (
-        <div className="bg-white rounded-2xl p-8 border border-gray-100 text-center text-gray-400 text-sm">
+        <div className="bg-surface rounded-md p-8 border border-hairline text-center text-ink-3 text-sm">
           No se encontraron columnas numéricas o categóricas para graficar en esta pestaña.
         </div>
       ) : (
@@ -126,7 +126,7 @@ function TabContent({ state, tabName }: { state: TabState; tabName: string }) {
       )}
 
       <div>
-        <h2 className="text-base font-semibold text-gray-700 mb-3">Datos completos</h2>
+        <h2 className="text-base font-semibold text-ink mb-3">Datos completos</h2>
         <DataTable headers={state.headers} rows={state.rows} />
       </div>
     </div>

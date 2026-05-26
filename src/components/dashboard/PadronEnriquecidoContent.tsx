@@ -47,13 +47,13 @@ function pct(a: number, b: number) { return b ? Math.round(a / b * 100) : 0 }
 
 function IndexGauge({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-      <p className="text-xs font-medium text-gray-500 mb-2">{label}</p>
+    <div className="bg-surface rounded-md p-5 border border-hairline">
+      <p className="text-xs font-medium text-ink-2 mb-2">{label}</p>
       <div className="flex items-end gap-2 mb-2">
         <span className="text-3xl font-black" style={{ color }}>{value}</span>
-        <span className="text-sm text-gray-400 pb-1">/100</span>
+        <span className="text-sm text-ink-3 pb-1">/100</span>
       </div>
-      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div className="h-2 bg-panel rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all"
           style={{ width: `${value}%`, backgroundColor: color }}
@@ -64,16 +64,16 @@ function IndexGauge({ label, value, color }: { label: string; value: number; col
 }
 
 function ChannelBar({ label, pct: p, count, total }: { label: string; pct: number; count: number; total: number }) {
-  const color = p >= 60 ? "#10b981" : p >= 30 ? "#f59e0b" : "#ef4444"
+  const color = p >= 60 ? "#0f9b8e" : p >= 30 ? "#e0921a" : "#d6456a"
   return (
     <div>
       <div className="flex items-center justify-between text-sm mb-1.5">
-        <span className="font-medium text-gray-700">{label}</span>
+        <span className="font-medium text-ink">{label}</span>
         <span className="font-bold" style={{ color }}>{p}%
-          <span className="text-xs text-gray-400 font-normal ml-2">{count.toLocaleString("es-AR")} / {total.toLocaleString("es-AR")}</span>
+          <span className="text-xs text-ink-3 font-normal ml-2">{count.toLocaleString("es-AR")} / {total.toLocaleString("es-AR")}</span>
         </span>
       </div>
-      <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+      <div className="h-3 bg-panel rounded-full overflow-hidden">
         <div className="h-full rounded-full transition-all" style={{ width: `${p}%`, backgroundColor: color }} />
       </div>
     </div>
@@ -185,13 +185,13 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
   const redesAllCols   = useMemo(() => findAllCols(headers, COL.redesSociales), [headers])
 
   const segCols: SegCols = useMemo(() => ({
-    iCelular:   cols.celular,
-    iEmail:     cols.email,
-    iRedes:     cols.redes,
+    iCelular:   celularAllCols,   // use ALL matching columns, matching the Contactabilidad tab
+    iEmail:     emailAllCols,
+    iRedes:     redesAllCols,
     iAfil:      cols.afil,
     iDomicilio: cols.domicilioReal >= 0 ? cols.domicilioReal : cols.domicilio,
     iBarrio:    cols.barrio,
-  }), [cols])
+  }), [celularAllCols, emailAllCols, redesAllCols, cols])
 
   // ── Apply all filters ───────────────────────────────────────────────────────
   const displayRows = useMemo(() => {
@@ -411,11 +411,11 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
     // ── Cruce electoral avanzado ────────────────────────────────────────────
     const SEGS_CFG: { seg: Segmento; label: string; color: string }[] = [
-      { seg: "nucleoDuro",             label: "Núcleo duro",           color: "#1e3a5f" },
-      { seg: "contactableDigital",     label: "Contactable digital",   color: "#10b981" },
-      { seg: "contactableTerritorial", label: "Contactable territ.",   color: "#0ea5e9" },
-      { seg: "persuadible",            label: "Persuadible",           color: "#f59e0b" },
-      { seg: "sinAlcance",             label: "Sin alcance",           color: "#ef4444" },
+      { seg: "nucleoDuro",             label: "Núcleo duro",           color: "#5b50e6" },
+      { seg: "contactableDigital",     label: "Contactable digital",   color: "#0f9b8e" },
+      { seg: "contactableTerritorial", label: "Contactable territ.",   color: "#3c9bd6" },
+      { seg: "persuadible",            label: "Persuadible",           color: "#e0921a" },
+      { seg: "sinAlcance",             label: "Sin alcance",           color: "#d6456a" },
     ]
 
     const cruceSeg = SEGS_CFG.map(({ seg, label, color }) => {
@@ -496,11 +496,11 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       : []
 
     const SEG_COLORS: Record<string, string> = {
-      "Núcleo duro":           "#1e3a5f",
-      "Contactable digital":   "#10b981",
-      "Contactable territorial": "#0ea5e9",
-      "Persuadible":           "#f59e0b",
-      "Sin alcance":           "#ef4444",
+      "Núcleo duro":           "#5b50e6",
+      "Contactable digital":   "#0f9b8e",
+      "Contactable territorial": "#3c9bd6",
+      "Persuadible":           "#e0921a",
+      "Sin alcance":           "#d6456a",
     }
     const SEG_LABELS: Record<string, string> = {
       nucleoDuro:              "Núcleo duro",
@@ -817,10 +817,10 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
   const ExportBtn = ({ label, icon, onClick, color = "sky" }: { label: string; icon: string; onClick: () => void; color?: string }) => (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all
-        ${color === "green" ? "border-green-200 text-green-700 hover:bg-green-50" :
-          color === "purple" ? "border-purple-200 text-purple-700 hover:bg-purple-50" :
-          "border-sky-200 text-sky-700 hover:bg-sky-50"}`}
+      className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium border transition-all
+        ${color === "green" ? "border-hairline text-success hover:bg-success-tint" :
+          color === "purple" ? "border-hairline text-accent hover:bg-accent-tint" :
+          "border-hairline text-accent hover:bg-accent-tint"}`}
     >
       <span>{icon}</span>{label}
     </button>
@@ -832,22 +832,22 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Padrón Electoral Enriquecido</h1>
-          <p className="text-gray-400 text-sm mt-0.5">
+          <h1 className="text-xl font-bold text-ink">Padrón Electoral Enriquecido</h1>
+          <p className="text-ink-3 text-sm mt-0.5">
             {a.total.toLocaleString("es-AR")} electores · {headers.length} columnas detectadas
             {a.pctOct25 !== null && ` · Participación Oct 2025: ${a.pctOct25}%`}
-            {(filterBarrio || filterCircuito) && <span className="text-sky-600"> · {rows.length.toLocaleString("es-AR")} totales</span>}
+            {(filterBarrio || filterCircuito) && <span className="text-accent"> · {rows.length.toLocaleString("es-AR")} totales</span>}
           </p>
-          {lastUpdated && <p className="text-xs text-gray-400 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
+          {lastUpdated && <p className="text-xs text-ink-3 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {sheetTabs.length > 1 && (
             <div className="flex items-center gap-1">
-              <span className="text-[10px] text-gray-400 uppercase tracking-wider">Padrón</span>
+              <span className="text-[10px] text-ink-3 uppercase tracking-wider">Padrón</span>
               <select
                 value={activeSheetTab}
                 onChange={e => setActiveSheetTab(e.target.value)}
-                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-sky-300"
+                className="text-xs border border-hairline rounded-lg px-2 py-1.5 text-ink-2 bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 {sheetTabs.map(t => (
                   <option key={t.id} value={t.title}>{t.title}</option>
@@ -857,11 +857,11 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           )}
           {a.circData.length > 0 && (
             <div className="flex items-center gap-1">
-              <span className="text-[10px] text-gray-400 uppercase tracking-wider">Circuito</span>
+              <span className="text-[10px] text-ink-3 uppercase tracking-wider">Circuito</span>
               <select
                 value={filterCircuito}
                 onChange={e => setFilterCircuito(e.target.value)}
-                className="text-xs border border-purple-200 rounded-lg px-2 py-1.5 text-purple-700 bg-white focus:outline-none focus:ring-2 focus:ring-purple-300"
+                className="text-xs border border-hairline rounded-lg px-2 py-1.5 text-accent bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">Todos</option>
                 {a.circData.map(c => (
@@ -869,17 +869,17 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 ))}
               </select>
               {filterCircuito && (
-                <button onClick={() => setFilterCircuito("")} className="text-xs text-purple-500 hover:text-purple-700 ml-1">✕</button>
+                <button onClick={() => setFilterCircuito("")} className="text-xs text-accent hover:text-accent ml-1">✕</button>
               )}
             </div>
           )}
           {a.mesaData.length > 0 && (
             <div className="flex items-center gap-1">
-              <span className="text-[10px] text-gray-400 uppercase tracking-wider">Mesa</span>
+              <span className="text-[10px] text-ink-3 uppercase tracking-wider">Mesa</span>
               <select
                 value={filterMesa}
                 onChange={e => setFilterMesa(e.target.value)}
-                className="text-xs border border-sky-200 rounded-lg px-2 py-1.5 text-sky-700 bg-white focus:outline-none focus:ring-2 focus:ring-sky-300"
+                className="text-xs border border-hairline rounded-lg px-2 py-1.5 text-accent bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">Todas</option>
                 {a.mesaData.map(m => (
@@ -887,17 +887,17 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 ))}
               </select>
               {filterMesa && (
-                <button onClick={() => setFilterMesa("")} className="text-xs text-sky-500 hover:text-sky-700 ml-1">✕</button>
+                <button onClick={() => setFilterMesa("")} className="text-xs text-accent hover:text-accent ml-1">✕</button>
               )}
             </div>
           )}
           {a.sexoData.length > 0 && (
             <div className="flex items-center gap-1">
-              <span className="text-[10px] text-gray-400 uppercase tracking-wider">Sexo</span>
+              <span className="text-[10px] text-ink-3 uppercase tracking-wider">Sexo</span>
               <select
                 value={filterSexo}
                 onChange={e => setFilterSexo(e.target.value)}
-                className="text-xs border border-pink-200 rounded-lg px-2 py-1.5 text-pink-700 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="text-xs border border-hairline rounded-lg px-2 py-1.5 text-accent bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">Todos</option>
                 {a.sexoData.map(s => (
@@ -905,16 +905,16 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 ))}
               </select>
               {filterSexo && (
-                <button onClick={() => setFilterSexo("")} className="text-xs text-pink-500 hover:text-pink-700 ml-1">✕</button>
+                <button onClick={() => setFilterSexo("")} className="text-xs text-accent hover:text-accent ml-1">✕</button>
               )}
             </div>
           )}
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-gray-400 uppercase tracking-wider">Segmento</span>
+            <span className="text-[10px] text-ink-3 uppercase tracking-wider">Segmento</span>
             <select
               value={filterSegmento}
               onChange={e => setFilterSegmento(e.target.value)}
-              className="text-xs border border-amber-200 rounded-lg px-2 py-1.5 text-amber-700 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+              className="text-xs border border-hairline rounded-lg px-2 py-1.5 text-warn bg-surface focus:outline-none focus:ring-2 focus:ring-hairline-strong"
             >
               <option value="">Todos</option>
               <option value="nucleoDuro">Núcleo duro</option>
@@ -924,10 +924,10 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               <option value="sinAlcance">Sin alcance</option>
             </select>
             {filterSegmento && (
-              <button onClick={() => setFilterSegmento("")} className="text-xs text-amber-500 hover:text-amber-700 ml-1">✕</button>
+              <button onClick={() => setFilterSegmento("")} className="text-xs text-warn hover:text-warn ml-1">✕</button>
             )}
           </div>
-          <button onClick={load} className="flex items-center gap-1.5 text-xs text-sky-600 px-3 py-2 rounded-lg hover:bg-sky-50 border border-sky-200 transition-colors">
+          <button onClick={load} className="flex items-center gap-1.5 text-xs text-accent px-3 py-2 rounded-lg hover:bg-accent-tint border border-hairline transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
             </svg>
@@ -937,20 +937,20 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       </div>
 
       {/* Barrio filter */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3">
+      <div className="bg-surface rounded-md border border-hairline px-4 py-3">
         <BarrioFilter value={filterBarrio} onChange={setFilterBarrio} />
       </div>
 
       {/* Tab bar */}
-      <div className="flex flex-wrap gap-1 bg-gray-100 rounded-2xl p-1">
+      <div className="flex flex-wrap gap-1 bg-panel rounded-md p-1">
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all flex-1 justify-center ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all flex-1 justify-center ${
               activeTab === t.id
-                ? "bg-white shadow-sm text-[#1e3a5f]"
-                : "text-gray-500 hover:text-gray-700"
+                ? "bg-surface  text-[#5b50e6]"
+                : "text-ink-2 hover:text-ink"
             }`}
           >
             <span className="text-base leading-none">{t.icon}</span>
@@ -965,48 +965,48 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       {activeTab === "resumen" && (
         <div className="space-y-6">
           <section>
-            <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — KPIs generales</p>
+            <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — KPIs generales</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <KPICard title="Total electores" value={a.total.toLocaleString("es-AR")} color="#1e3a5f" />
-              {a.circData.length > 0 && <KPICard title="Circuitos" value={a.circData.length} color="#0ea5e9" />}
-              {a.mesaData.length > 0 && <KPICard title="Mesas" value={a.mesaData.length} color="#8b5cf6" subtitle={`~${Math.round(a.total/a.mesaData.length)} por mesa`} />}
-              {a.estabData.length > 0 && <KPICard title="Establecimientos" value={a.estabData.length} color="#10b981" />}
-              <KPICard title="% Mujeres" value={`${a.pctF}%`} color="#ec4899" subtitle={`${a.totalF.toLocaleString("es-AR")} electoras`} />
-              <KPICard title="% Hombres" value={`${a.pctM}%`} color="#0ea5e9" subtitle={`${a.totalM.toLocaleString("es-AR")} electores`} />
-              {a.avgAge !== null && <KPICard title="Edad promedio" value={`${a.avgAge} años`} color="#8b5cf6" subtitle="calculado con CLASE" />}
-              <KPICard title="% Enriquecido" value={`${a.pctEnriched}%`} color="#10b981"
+              <KPICard title="Total electores" value={a.total.toLocaleString("es-AR")} color="#5b50e6" />
+              {a.circData.length > 0 && <KPICard title="Circuitos" value={a.circData.length} color="#3c9bd6" />}
+              {a.mesaData.length > 0 && <KPICard title="Mesas" value={a.mesaData.length} color="#5b50e6" subtitle={`~${Math.round(a.total/a.mesaData.length)} por mesa`} />}
+              {a.estabData.length > 0 && <KPICard title="Establecimientos" value={a.estabData.length} color="#0f9b8e" />}
+              <KPICard title="% Mujeres" value={`${a.pctF}%`} color="#c0497f" subtitle={`${a.totalF.toLocaleString("es-AR")} electoras`} />
+              <KPICard title="% Hombres" value={`${a.pctM}%`} color="#3c9bd6" subtitle={`${a.totalM.toLocaleString("es-AR")} electores`} />
+              {a.avgAge !== null && <KPICard title="Edad promedio" value={`${a.avgAge} años`} color="#5b50e6" subtitle="calculado con CLASE" />}
+              <KPICard title="% Enriquecido" value={`${a.pctEnriched}%`} color="#0f9b8e"
                 subtitle={`${a.cntEnriched.toLocaleString("es-AR")} registros`}
                 alert={a.pctEnriched >= 60 ? "ok" : a.pctEnriched >= 30 ? "warn" : "danger"} />
-              <KPICard title="% Sin enriquecer" value={`${a.pctSinEnriquecer}%`} color="#ef4444"
+              <KPICard title="% Sin enriquecer" value={`${a.pctSinEnriquecer}%`} color="#d6456a"
                 subtitle={`${a.cntSinEnriquecer.toLocaleString("es-AR")} sin datos extras`}
                 alert={a.pctSinEnriquecer <= 40 ? "ok" : a.pctSinEnriquecer <= 70 ? "warn" : "danger"} />
-              <KPICard title="Contactables" value={`${a.pctContact}%`} color="#f59e0b"
+              <KPICard title="Contactables" value={`${a.pctContact}%`} color="#e0921a"
                 subtitle={`${a.cntAnyContact.toLocaleString("es-AR")} registros`}
                 alert={a.pctContact >= 50 ? "ok" : a.pctContact >= 25 ? "warn" : "danger"} />
             </div>
           </section>
 
           <section>
-            <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Índices de campaña</p>
+            <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Índices de campaña</p>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <IndexGauge label="Contactabilidad" value={a.indices.contactabilidad} color="#10b981" />
-              <IndexGauge label="Persuadibilidad" value={a.indices.persuadibilidad} color="#0ea5e9" />
-              <IndexGauge label="Movilización" value={a.indices.movilizacion} color="#f59e0b" />
-              <IndexGauge label="Calidad de datos" value={a.indices.calidadDatos} color="#8b5cf6" />
+              <IndexGauge label="Contactabilidad" value={a.indices.contactabilidad} color="#0f9b8e" />
+              <IndexGauge label="Persuadibilidad" value={a.indices.persuadibilidad} color="#3c9bd6" />
+              <IndexGauge label="Movilización" value={a.indices.movilizacion} color="#e0921a" />
+              <IndexGauge label="Calidad de datos" value={a.indices.calidadDatos} color="#5b50e6" />
             </div>
           </section>
 
           {a.pctParticipacion !== null && (
             <section>
-              <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-3">★ Participación electoral — datos reales del padrón</p>
+              <p className="text-xs font-semibold text-success uppercase tracking-wider mb-3">★ Participación electoral — datos reales del padrón</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <KPICard title="Participación real" value={`${a.pctParticipacion}%`} color="#10b981"
+                <KPICard title="Participación real" value={`${a.pctParticipacion}%`} color="#0f9b8e"
                     subtitle={`${a.votoSI.toLocaleString("es-AR")} votaron`}
                     alert={a.pctParticipacion >= 70 ? "ok" : a.pctParticipacion >= 50 ? "warn" : "danger"} />
-                  <KPICard title="Ausentismo" value={`${100 - a.pctParticipacion}%`} color="#ef4444"
+                  <KPICard title="Ausentismo" value={`${100 - a.pctParticipacion}%`} color="#d6456a"
                     subtitle={`${a.votoNO.toLocaleString("es-AR")} no votaron`}
                     alert={(100 - a.pctParticipacion) <= 30 ? "ok" : (100 - a.pctParticipacion) <= 50 ? "warn" : "danger"} />
-                <KPICard title="Cruzados con voto" value={a.votoKnown.toLocaleString("es-AR")} color="#6b7280" subtitle={`${pct(a.votoKnown, a.total)}% del padrón`} />
+                <KPICard title="Cruzados con voto" value={a.votoKnown.toLocaleString("es-AR")} color="#5b6472" subtitle={`${pct(a.votoKnown, a.total)}% del padrón`} />
                 <KPICard title="Sin info de voto" value={(a.total - a.votoKnown).toLocaleString("es-AR")} color="#d1d5db" subtitle="no cruzados" />
               </div>
             </section>
@@ -1014,7 +1014,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <section>
-              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Segmentación electoral</p>
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Segmentación electoral</p>
               <PieChartComponent
                 data={a.segPieData} dataKey="value" nameKey="name"
                 title="Segmentación del padrón"
@@ -1022,27 +1022,27 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               />
             </section>
             <section>
-              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Resumen de segmentos</p>
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-3">
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Resumen de segmentos</p>
+              <div className="bg-surface rounded-md p-6 border border-hairline space-y-3">
                 {[
-                  { label: "Núcleo duro", value: a.seg.nucleoDuro, color: "#1e3a5f", desc: "Afiliado + contacto" },
-                  { label: "Contactable digital", value: a.seg.contactableDigital, color: "#10b981", desc: "Tiene celular / email" },
-                  { label: "Contactable territorial", value: a.seg.contactableTerritorial, color: "#0ea5e9", desc: "Tiene domicilio" },
-                  { label: "Persuadible", value: a.seg.persuadible, color: "#f59e0b", desc: "Sin afil, algún contacto" },
-                  { label: "Sin alcance", value: a.seg.sinAlcance, color: "#ef4444", desc: "Sin datos de contacto" },
+                  { label: "Núcleo duro", value: a.seg.nucleoDuro, color: "#5b50e6", desc: "Afiliado + contacto" },
+                  { label: "Contactable digital", value: a.seg.contactableDigital, color: "#0f9b8e", desc: "Tiene celular / email" },
+                  { label: "Contactable territorial", value: a.seg.contactableTerritorial, color: "#3c9bd6", desc: "Tiene domicilio" },
+                  { label: "Persuadible", value: a.seg.persuadible, color: "#e0921a", desc: "Sin afil, algún contacto" },
+                  { label: "Sin alcance", value: a.seg.sinAlcance, color: "#d6456a", desc: "Sin datos de contacto" },
                 ].map(s => (
                   <div key={s.label}>
                     <div className="flex justify-between text-sm mb-1">
                       <div>
-                        <span className="font-semibold text-gray-800">{s.label}</span>
-                        <span className="text-xs text-gray-400 ml-2">{s.desc}</span>
+                        <span className="font-semibold text-ink">{s.label}</span>
+                        <span className="text-xs text-ink-3 ml-2">{s.desc}</span>
                       </div>
                       <span className="font-bold" style={{ color: s.color }}>
                         {s.value.toLocaleString("es-AR")}
-                        <span className="text-xs text-gray-400 ml-1 font-normal">({pct(s.value, a.total)}%)</span>
+                        <span className="text-xs text-ink-3 ml-1 font-normal">({pct(s.value, a.total)}%)</span>
                       </span>
                     </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-2 bg-panel rounded-full overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${pct(s.value, a.total)}%`, backgroundColor: s.color }} />
                     </div>
                   </div>
@@ -1052,8 +1052,8 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           </div>
 
           {/* Export */}
-          <section className="bg-gray-50 rounded-2xl p-5 border border-gray-200">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Exportables</p>
+          <section className="bg-panel rounded-md p-5 border border-hairline">
+            <p className="text-xs font-semibold text-ink-2 uppercase tracking-wider mb-3">Exportables</p>
             <div className="flex flex-wrap gap-3">
               <ExportBtn label="CSV completo" icon="⬇" onClick={() => exportCSV(headers, rows, "padron_completo.csv")} color="sky" />
               <ExportBtn label="Núcleo duro" icon="⬇" onClick={() => exportSegment(headers, rows, segCols, "nucleoDuro", "padron_nucleo_duro.csv")} color="green" />
@@ -1071,18 +1071,18 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       {activeTab === "territorio" && (
         <div className="space-y-6">
           <section>
-            <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Estructura territorial</p>
+            <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Estructura territorial</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {a.circData.length > 0 && <KPICard title="Circuitos" value={a.circData.length} color="#1e3a5f" />}
-              {a.mesaData.length > 0 && <KPICard title="Mesas" value={a.mesaData.length} color="#0ea5e9" />}
-              {a.mesaData.length > 0 && <KPICard title="Promedio x mesa" value={Math.round(a.total / a.mesaData.length)} color="#10b981" />}
-              {a.geoRows > 0 && <KPICard title="Georreferenciados" value={`${pct(a.geoRows, a.total)}%`} color="#8b5cf6" subtitle={`${a.geoRows.toLocaleString("es-AR")} registros`} />}
+              {a.circData.length > 0 && <KPICard title="Circuitos" value={a.circData.length} color="#5b50e6" />}
+              {a.mesaData.length > 0 && <KPICard title="Mesas" value={a.mesaData.length} color="#3c9bd6" />}
+              {a.mesaData.length > 0 && <KPICard title="Promedio x mesa" value={Math.round(a.total / a.mesaData.length)} color="#0f9b8e" />}
+              {a.geoRows > 0 && <KPICard title="Georreferenciados" value={`${pct(a.geoRows, a.total)}%`} color="#5b50e6" subtitle={`${a.geoRows.toLocaleString("es-AR")} registros`} />}
             </div>
           </section>
 
           {a.circData.length > 0 && (
             <HorizontalBarChart
-              data={a.circData} color="#1e3a5f"
+              data={a.circData} color="#5b50e6"
               title="★ Electores por circuito"
               badge="★ CORE" total={a.total}
               caption={a.capCirc}
@@ -1091,9 +1091,9 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
           {a.mesaData.length > 0 && (
             <section>
-              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Ranking de mesas</p>
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Ranking de mesas</p>
               <HorizontalBarChart
-                data={a.mesaData} color="#0ea5e9"
+                data={a.mesaData} color="#3c9bd6"
                 title="● Electores por mesa (top 30)"
                 badge="● QUICK WIN" total={a.total} maxItems={30}
                 caption={a.capMesa}
@@ -1103,12 +1103,12 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
           {a.mesaData.length > 0 && (
             <section>
-              <h2 className="text-sm font-semibold text-gray-700 mb-3">Tabla completa de mesas</h2>
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <h2 className="text-sm font-semibold text-ink mb-3">Tabla completa de mesas</h2>
+              <div className="bg-surface rounded-md border border-hairline overflow-hidden">
                 <div className="overflow-x-auto max-h-96">
                   <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-gray-50">
-                      <tr className="text-gray-500 text-left">
+                    <thead className="sticky top-0 bg-panel">
+                      <tr className="text-ink-2 text-left">
                         <th className="px-4 py-3 font-medium">#</th>
                         <th className="px-4 py-3 font-medium">Mesa</th>
                         <th className="px-4 py-3 font-medium text-right">Electores</th>
@@ -1117,11 +1117,11 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                     </thead>
                     <tbody>
                       {a.mesaData.map((m, i) => (
-                        <tr key={m.name} className="border-t border-gray-50 hover:bg-gray-50/50">
-                          <td className="px-4 py-2.5 text-gray-400">{i + 1}</td>
-                          <td className="px-4 py-2.5 font-medium text-gray-800">{m.name}</td>
-                          <td className="px-4 py-2.5 text-right text-gray-700">{m.value.toLocaleString("es-AR")}</td>
-                          <td className="px-4 py-2.5 text-right text-gray-400">{pct(m.value, a.total)}%</td>
+                        <tr key={m.name} className="border-t border-hairline hover:bg-panel/50">
+                          <td className="px-4 py-2.5 text-ink-3">{i + 1}</td>
+                          <td className="px-4 py-2.5 font-medium text-ink">{m.name}</td>
+                          <td className="px-4 py-2.5 text-right text-ink">{m.value.toLocaleString("es-AR")}</td>
+                          <td className="px-4 py-2.5 text-right text-ink-3">{pct(m.value, a.total)}%</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1140,13 +1140,13 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
           {a.estabData.length > 0 && (
             <section>
-              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Establecimientos</p>
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Establecimientos</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-                <KPICard title="Establecimientos" value={a.estabData.length} color="#10b981" />
-                <KPICard title="Mayor" value={a.estabData[0]?.name ?? "—"} color="#0ea5e9" subtitle={`${a.estabData[0]?.value ?? 0} electores`} />
+                <KPICard title="Establecimientos" value={a.estabData.length} color="#0f9b8e" />
+                <KPICard title="Mayor" value={a.estabData[0]?.name ?? "—"} color="#3c9bd6" subtitle={`${a.estabData[0]?.value ?? 0} electores`} />
               </div>
               <HorizontalBarChart
-                data={a.estabData} color="#10b981"
+                data={a.estabData} color="#0f9b8e"
                 title="● Electores por establecimiento"
                 badge="● QUICK WIN" total={a.total} maxItems={20}
                 caption={`${a.estabData.length} establecimientos detectados. Mayor: ${a.estabData[0]?.name ?? "—"} (${a.estabData[0]?.value ?? 0} electores)`}
@@ -1156,11 +1156,11 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
           {a.indicesPerCircuito.length > 0 && (
             <section>
-              <p className="text-xs font-semibold text-purple-700 uppercase tracking-wider mb-3">⊞ Índices estratégicos por circuito</p>
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">⊞ Índices estratégicos por circuito</p>
+              <div className="bg-surface rounded-md border border-hairline overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
-                    <thead className="bg-gray-50 text-gray-500 text-left uppercase tracking-wider">
+                    <thead className="bg-panel text-ink-2 text-left uppercase tracking-wider">
                       <tr>
                         <th className="px-4 py-3">Circuito</th>
                         <th className="px-4 py-3 text-right">Electores</th>
@@ -1170,14 +1170,14 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                         <th className="px-4 py-3 text-right">ICD</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-hairline">
                       {a.indicesPerCircuito.map(c => (
-                        <tr key={c.name} className="hover:bg-gray-50">
-                          <td className="px-4 py-2.5 font-semibold text-gray-800">{c.name}</td>
-                          <td className="px-4 py-2.5 text-right text-gray-500">{c.total.toLocaleString("es-AR")}</td>
+                        <tr key={c.name} className="hover:bg-panel">
+                          <td className="px-4 py-2.5 font-semibold text-ink">{c.name}</td>
+                          <td className="px-4 py-2.5 text-right text-ink-2">{c.total.toLocaleString("es-AR")}</td>
                           {[c.ic, c.ip, c.imp, c.icd].map((v, i) => (
                             <td key={i} className="px-4 py-2.5 text-right font-bold"
-                              style={{ color: v >= 60 ? "#10b981" : v >= 35 ? "#f59e0b" : "#ef4444" }}>
+                              style={{ color: v >= 60 ? "#0f9b8e" : v >= 35 ? "#e0921a" : "#d6456a" }}>
                               {v}
                             </td>
                           ))}
@@ -1186,7 +1186,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                     </tbody>
                   </table>
                 </div>
-                <div className="px-4 py-2 border-t border-gray-50 flex gap-4 text-[10px] text-gray-400">
+                <div className="px-4 py-2 border-t border-hairline flex gap-4 text-[10px] text-ink-3">
                   <span>IC = Índice de Contactabilidad</span>
                   <span>IP = Persuadibilidad</span>
                   <span>IMP = Movilización</span>
@@ -1207,9 +1207,9 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
           {a.participacionCircuito.length > 0 && (
             <section>
-              <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-3">★ Participación real por circuito (%)</p>
+              <p className="text-xs font-semibold text-success uppercase tracking-wider mb-3">★ Participación real por circuito (%)</p>
               <HorizontalBarChart
-                data={a.participacionCircuito} color="#10b981"
+                data={a.participacionCircuito} color="#0f9b8e"
                 title="% que votó por circuito"
                 badge="★ CORE"
                 caption={(() => {
@@ -1223,9 +1223,9 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
           {a.participacionMesa.length > 0 && (
             <section>
-              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Participación real por mesa (%)</p>
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Participación real por mesa (%)</p>
               <HorizontalBarChart
-                data={a.participacionMesa} color="#0ea5e9"
+                data={a.participacionMesa} color="#3c9bd6"
                 title="% que votó por mesa"
                 badge="● QUICK WIN"
                 caption={(() => {
@@ -1239,65 +1239,65 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           {/* ── Comparativa por barrio ─────────────────────────────────────── */}
           {a.barrioComparativa.length > 0 && (
             <section>
-              <p className="text-xs font-semibold text-purple-700 uppercase tracking-wider mb-3">⊞ Comparativa por barrio — métricas en %</p>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-5 pt-4 pb-3 border-b border-gray-50 flex items-center justify-between">
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">⊞ Comparativa por barrio — métricas en %</p>
+              <div className="bg-surface rounded-md border border-hairline overflow-hidden">
+                <div className="px-5 pt-4 pb-3 border-b border-hairline flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-gray-800">Performance por barrio</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Cada métrica expresada en % · ordenado por cantidad de electores</p>
+                    <p className="text-sm font-semibold text-ink">Performance por barrio</p>
+                    <p className="text-xs text-ink-3 mt-0.5">Cada métrica expresada en % · ordenado por cantidad de electores</p>
                   </div>
-                  <span className="text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">⊞ TERRITORIO</span>
+                  <span className="text-[10px] font-bold text-accent bg-accent-tint border border-hairline px-2 py-0.5 rounded-full">⊞ TERRITORIO</span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="bg-gray-50 text-left">
-                        <th className="px-4 py-3 text-gray-500 font-medium">Barrio</th>
-                        <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">Electores</th>
+                      <tr className="bg-panel text-left">
+                        <th className="px-4 py-3 text-ink-2 font-medium">Barrio</th>
+                        <th className="px-4 py-3 text-ink-2 font-medium text-right whitespace-nowrap">Electores</th>
                         {a.barrioComparativa.some(b => b.pctOct25 !== null) && (
-                          <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">Oct&nbsp;2025</th>
+                          <th className="px-4 py-3 text-ink-2 font-medium text-right whitespace-nowrap">Oct&nbsp;2025</th>
                         )}
                         {a.barrioComparativa.some(b => b.pctSep25 !== null) && (
-                          <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">Sep&nbsp;2025</th>
+                          <th className="px-4 py-3 text-ink-2 font-medium text-right whitespace-nowrap">Sep&nbsp;2025</th>
                         )}
                         {a.barrioComparativa.some(b => b.pctOct25 !== null && b.pctSep25 !== null) && (
-                          <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">Δ&nbsp;Oct-Sep</th>
+                          <th className="px-4 py-3 text-ink-2 font-medium text-right whitespace-nowrap">Δ&nbsp;Oct-Sep</th>
                         )}
-                        <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">Contacto</th>
-                        <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">Núcleo</th>
+                        <th className="px-4 py-3 text-ink-2 font-medium text-right whitespace-nowrap">Contacto</th>
+                        <th className="px-4 py-3 text-ink-2 font-medium text-right whitespace-nowrap">Núcleo</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-hairline">
                       {a.barrioComparativa.map((b) => {
                         const maxElec = Math.max(...a.barrioComparativa.map(x => x.pctElectores))
                         const delta = (b.pctOct25 !== null && b.pctSep25 !== null) ? b.pctOct25 - b.pctSep25 : null
 
                         const partColor = (v: number | null) => {
-                          if (v === null) return "bg-gray-200"
-                          if (v >= 70) return "bg-green-500"
-                          if (v >= 55) return "bg-amber-400"
-                          return "bg-red-400"
+                          if (v === null) return "bg-panel"
+                          if (v >= 70) return "bg-success"
+                          if (v >= 55) return "bg-warn"
+                          return "bg-danger"
                         }
                         const partText = (v: number | null) => {
-                          if (v === null) return "text-gray-400"
-                          if (v >= 70) return "text-green-700"
-                          if (v >= 55) return "text-amber-700"
-                          return "text-red-600"
+                          if (v === null) return "text-ink-3"
+                          if (v >= 70) return "text-success"
+                          if (v >= 55) return "text-warn"
+                          return "text-danger"
                         }
 
                         return (
-                          <tr key={b.name} className="hover:bg-slate-50/60 transition-colors">
-                            <td className="px-4 py-3 font-semibold text-gray-800">{b.shortName}</td>
+                          <tr key={b.name} className="hover:bg-panel/60 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-ink">{b.shortName}</td>
 
                             {/* Electores */}
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2 justify-end">
-                                <span className="text-gray-600 tabular-nums">{b.pctElectores}%</span>
-                                <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                  <div className="h-full bg-sky-500 rounded-full" style={{ width: `${(b.pctElectores / maxElec) * 100}%` }} />
+                                <span className="text-ink-2 tabular-nums">{b.pctElectores}%</span>
+                                <div className="w-16 h-1.5 bg-panel rounded-full overflow-hidden">
+                                  <div className="h-full bg-accent rounded-full" style={{ width: `${(b.pctElectores / maxElec) * 100}%` }} />
                                 </div>
                               </div>
-                              <p className="text-gray-400 text-right tabular-nums mt-0.5">{b.total.toLocaleString("es-AR")}</p>
+                              <p className="text-ink-3 text-right tabular-nums mt-0.5">{b.total.toLocaleString("es-AR")}</p>
                             </td>
 
                             {/* Oct 2025 */}
@@ -1307,7 +1307,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                                   <span className={`font-bold tabular-nums ${partText(b.pctOct25)}`}>
                                     {b.pctOct25 !== null ? `${b.pctOct25}%` : "—"}
                                   </span>
-                                  <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="w-16 h-1.5 bg-panel rounded-full overflow-hidden">
                                     <div className={`h-full rounded-full ${partColor(b.pctOct25)}`}
                                       style={{ width: `${b.pctOct25 ?? 0}%` }} />
                                   </div>
@@ -1322,7 +1322,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                                   <span className={`font-bold tabular-nums ${partText(b.pctSep25)}`}>
                                     {b.pctSep25 !== null ? `${b.pctSep25}%` : "—"}
                                   </span>
-                                  <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="w-16 h-1.5 bg-panel rounded-full overflow-hidden">
                                     <div className={`h-full rounded-full ${partColor(b.pctSep25)}`}
                                       style={{ width: `${b.pctSep25 ?? 0}%` }} />
                                   </div>
@@ -1334,19 +1334,19 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                             {a.barrioComparativa.some(x => x.pctOct25 !== null && x.pctSep25 !== null) && (
                               <td className="px-4 py-3 text-right tabular-nums font-semibold">
                                 {delta !== null ? (
-                                  <span className={delta > 0 ? "text-green-600" : delta < 0 ? "text-red-500" : "text-gray-400"}>
+                                  <span className={delta > 0 ? "text-success" : delta < 0 ? "text-danger" : "text-ink-3"}>
                                     {delta > 0 ? "+" : ""}{delta}pp
                                   </span>
-                                ) : <span className="text-gray-300">—</span>}
+                                ) : <span className="text-ink-4">—</span>}
                               </td>
                             )}
 
                             {/* Contacto */}
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2 justify-end">
-                                <span className="text-sky-700 font-semibold tabular-nums">{b.pctContacto}%</span>
-                                <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                  <div className="h-full bg-sky-400 rounded-full" style={{ width: `${b.pctContacto}%` }} />
+                                <span className="text-accent font-semibold tabular-nums">{b.pctContacto}%</span>
+                                <div className="w-16 h-1.5 bg-panel rounded-full overflow-hidden">
+                                  <div className="h-full bg-accent rounded-full" style={{ width: `${b.pctContacto}%` }} />
                                 </div>
                               </div>
                             </td>
@@ -1354,9 +1354,9 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                             {/* Núcleo duro */}
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2 justify-end">
-                                <span className="text-[#1e3a5f] font-semibold tabular-nums">{b.pctNucleo}%</span>
-                                <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                  <div className="h-full bg-[#1e3a5f] rounded-full" style={{ width: `${b.pctNucleo}%` }} />
+                                <span className="text-[#5b50e6] font-semibold tabular-nums">{b.pctNucleo}%</span>
+                                <div className="w-16 h-1.5 bg-panel rounded-full overflow-hidden">
+                                  <div className="h-full bg-[#5b50e6] rounded-full" style={{ width: `${b.pctNucleo}%` }} />
                                 </div>
                               </div>
                             </td>
@@ -1366,14 +1366,14 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                     </tbody>
                     {/* Totals row */}
                     <tfoot>
-                      <tr className="bg-gray-50 border-t-2 border-gray-200 font-semibold">
-                        <td className="px-4 py-3 text-gray-700">Total / Promedio</td>
-                        <td className="px-4 py-3 text-right text-gray-600 tabular-nums">
+                      <tr className="bg-panel border-t-2 border-hairline font-semibold">
+                        <td className="px-4 py-3 text-ink">Total / Promedio</td>
+                        <td className="px-4 py-3 text-right text-ink-2 tabular-nums">
                           {a.barrioComparativa.reduce((s, b) => s + b.pctElectores, 0)}%
-                          <p className="text-gray-400 font-normal tabular-nums">{a.barrioComparativa.reduce((s, b) => s + b.total, 0).toLocaleString("es-AR")}</p>
+                          <p className="text-ink-3 font-normal tabular-nums">{a.barrioComparativa.reduce((s, b) => s + b.total, 0).toLocaleString("es-AR")}</p>
                         </td>
                         {a.barrioComparativa.some(b => b.pctOct25 !== null) && (
-                          <td className="px-4 py-3 text-right text-gray-600 tabular-nums">
+                          <td className="px-4 py-3 text-right text-ink-2 tabular-nums">
                             {(() => {
                               const vals = a.barrioComparativa.filter(b => b.pctOct25 !== null).map(b => b.pctOct25!)
                               return vals.length ? `${Math.round(vals.reduce((s, v) => s + v, 0) / vals.length)}%` : "—"
@@ -1381,7 +1381,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                           </td>
                         )}
                         {a.barrioComparativa.some(b => b.pctSep25 !== null) && (
-                          <td className="px-4 py-3 text-right text-gray-600 tabular-nums">
+                          <td className="px-4 py-3 text-right text-ink-2 tabular-nums">
                             {(() => {
                               const vals = a.barrioComparativa.filter(b => b.pctSep25 !== null).map(b => b.pctSep25!)
                               return vals.length ? `${Math.round(vals.reduce((s, v) => s + v, 0) / vals.length)}%` : "—"
@@ -1391,20 +1391,20 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                         {a.barrioComparativa.some(b => b.pctOct25 !== null && b.pctSep25 !== null) && (
                           <td className="px-4 py-3" />
                         )}
-                        <td className="px-4 py-3 text-right text-sky-700 tabular-nums">
+                        <td className="px-4 py-3 text-right text-accent tabular-nums">
                           {Math.round(a.barrioComparativa.reduce((s, b) => s + b.pctContacto, 0) / a.barrioComparativa.length)}%
                         </td>
-                        <td className="px-4 py-3 text-right text-[#1e3a5f] tabular-nums">
+                        <td className="px-4 py-3 text-right text-[#5b50e6] tabular-nums">
                           {Math.round(a.barrioComparativa.reduce((s, b) => s + b.pctNucleo, 0) / a.barrioComparativa.length)}%
                         </td>
                       </tr>
                     </tfoot>
                   </table>
                 </div>
-                <div className="px-5 py-3 border-t border-gray-50 flex flex-wrap gap-4 text-[10px] text-gray-400">
-                  <span><span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1"></span>≥ 70% excelente</span>
-                  <span><span className="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1"></span>55–69% aceptable</span>
-                  <span><span className="inline-block w-2 h-2 rounded-full bg-red-400 mr-1"></span>&lt; 55% crítico</span>
+                <div className="px-5 py-3 border-t border-hairline flex flex-wrap gap-4 text-[10px] text-ink-3">
+                  <span><span className="inline-block w-2 h-2 rounded-full bg-success mr-1"></span>≥ 70% excelente</span>
+                  <span><span className="inline-block w-2 h-2 rounded-full bg-warn mr-1"></span>55–69% aceptable</span>
+                  <span><span className="inline-block w-2 h-2 rounded-full bg-danger mr-1"></span>&lt; 55% crítico</span>
                   <span className="ml-auto">Solo barrios con electores georreferenciados</span>
                 </div>
               </div>
@@ -1419,12 +1419,12 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       {activeTab === "perfil" && (
         <div className="space-y-6">
           <section>
-            <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Perfil demográfico</p>
+            <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Perfil demográfico</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <KPICard title="Electoras (F)" value={`${a.pctF}%`} color="#ec4899" subtitle={a.totalF.toLocaleString("es-AR")} />
-              <KPICard title="Electores (M)" value={`${a.pctM}%`} color="#0ea5e9" subtitle={a.totalM.toLocaleString("es-AR")} />
-              {a.avgAge !== null && <KPICard title="Edad promedio" value={`${a.avgAge} años`} color="#8b5cf6" />}
-              <KPICard title="Completitud perfil" value={`${pctFilled(rows, cols.nombre)}%`} color="#10b981" subtitle="nombres cargados" />
+              <KPICard title="Electoras (F)" value={`${a.pctF}%`} color="#c0497f" subtitle={a.totalF.toLocaleString("es-AR")} />
+              <KPICard title="Electores (M)" value={`${a.pctM}%`} color="#3c9bd6" subtitle={a.totalM.toLocaleString("es-AR")} />
+              {a.avgAge !== null && <KPICard title="Edad promedio" value={`${a.avgAge} años`} color="#5b50e6" />}
+              <KPICard title="Completitud perfil" value={`${pctFilled(rows, cols.nombre)}%`} color="#0f9b8e" subtitle="nombres cargados" />
             </div>
           </section>
 
@@ -1435,7 +1435,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
             {a.ageGroupData.length > 0 && (
               <BarChartComponent
                 data={a.ageGroupData} dataKey="value" nameKey="name"
-                color="#8b5cf6" title="★ Grupos etarios" total={a.total}
+                color="#5b50e6" title="★ Grupos etarios" total={a.total}
                 caption={a.capEdad}
               />
             )}
@@ -1445,14 +1445,14 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {a.civilData.length > 0 && (
                 <HorizontalBarChart
-                  data={a.civilData} color="#0ea5e9"
+                  data={a.civilData} color="#3c9bd6"
                   title="● Estado civil" badge="● QUICK WIN" total={a.total}
                   caption={a.capCivil}
                 />
               )}
               {a.educData.length > 0 && (
                 <HorizontalBarChart
-                  data={a.educData} color="#10b981"
+                  data={a.educData} color="#0f9b8e"
                   title="● Nivel educativo" badge="● QUICK WIN" total={a.total}
                   caption={a.capEduc}
                 />
@@ -1464,14 +1464,14 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {a.profData.length > 0 && (
                 <HorizontalBarChart
-                  data={a.profData} color="#8b5cf6"
+                  data={a.profData} color="#5b50e6"
                   title="● Ocupación / profesión" badge="● QUICK WIN" total={a.total}
                   caption={a.capProf}
                 />
               )}
               {a.regimenData.length > 0 && (
                 <HorizontalBarChart
-                  data={a.regimenData} color="#f59e0b"
+                  data={a.regimenData} color="#e0921a"
                   title="● Régimen impositivo" badge="● QUICK WIN" total={a.total}
                   caption={a.capRegimen}
                 />
@@ -1481,19 +1481,19 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
           {(a.cntAUH > 0 || a.cntIFE > 0) && (
             <section>
-              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Beneficios sociales</p>
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Beneficios sociales</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {a.cntAUH > 0 && (
                   <KPICard title="Beneficiarios AUH" value={a.cntAUH.toLocaleString("es-AR")}
-                    color="#0ea5e9" subtitle={`${pct(a.cntAUH, a.total)}% del padrón`} />
+                    color="#3c9bd6" subtitle={`${pct(a.cntAUH, a.total)}% del padrón`} />
                 )}
                 {a.cntIFE > 0 && (
                   <KPICard title="Beneficiarios IFE" value={a.cntIFE.toLocaleString("es-AR")}
-                    color="#10b981" subtitle={`${pct(a.cntIFE, a.total)}% del padrón`} />
+                    color="#0f9b8e" subtitle={`${pct(a.cntIFE, a.total)}% del padrón`} />
                 )}
                 {a.cntAUH > 0 && a.cntIFE > 0 && (
                   <KPICard title="AUH + IFE (overlap)" value={(a.cntAUH + a.cntIFE).toLocaleString("es-AR")}
-                    color="#8b5cf6" subtitle="beneficiarios totales" />
+                    color="#5b50e6" subtitle="beneficiarios totales" />
                 )}
               </div>
             </section>
@@ -1507,26 +1507,26 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       {activeTab === "contactabilidad" && (
         <div className="space-y-6">
           <section>
-            <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Canales de contacto</p>
+            <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Canales de contacto</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <KPICard title="Índice de contacto" value={`${a.indices.contactabilidad}/100`} color="#10b981" />
-              <KPICard title="Con celular" value={`${a.pctCelular}%`} color="#0ea5e9" subtitle={`${a.cntCelular.toLocaleString("es-AR")} registros`} />
-              <KPICard title="Con email" value={`${a.pctEmail}%`} color="#8b5cf6" subtitle={`${a.cntEmail.toLocaleString("es-AR")} registros`} />
-              <KPICard title="Con redes" value={`${a.pctRedes}%`} color="#ec4899" subtitle={`${a.cntRedes.toLocaleString("es-AR")} registros`} />
+              <KPICard title="Índice de contacto" value={`${a.indices.contactabilidad}/100`} color="#0f9b8e" />
+              <KPICard title="Con celular" value={`${a.pctCelular}%`} color="#3c9bd6" subtitle={`${a.cntCelular.toLocaleString("es-AR")} registros`} />
+              <KPICard title="Con email" value={`${a.pctEmail}%`} color="#5b50e6" subtitle={`${a.cntEmail.toLocaleString("es-AR")} registros`} />
+              <KPICard title="Con redes" value={`${a.pctRedes}%`} color="#c0497f" subtitle={`${a.cntRedes.toLocaleString("es-AR")} registros`} />
             </div>
           </section>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5">
-              <h3 className="text-sm font-semibold text-gray-700">Alcance por canal</h3>
+            <div className="bg-surface rounded-md p-6 border border-hairline space-y-5">
+              <h3 className="text-sm font-semibold text-ink">Alcance por canal</h3>
               <ChannelBar label="📱 Celular / WhatsApp" pct={a.pctCelular} count={a.cntCelular} total={a.total} />
               <ChannelBar label="✉️ Email" pct={a.pctEmail} count={a.cntEmail} total={a.total} />
               <ChannelBar label="📲 Redes sociales" pct={a.pctRedes} count={a.cntRedes} total={a.total} />
               <ChannelBar label="🎯 Cualquier canal" pct={a.pctContact} count={a.cntAnyContact} total={a.total} />
-              <div className="pt-3 border-t border-gray-50">
-                <div className="flex justify-between text-xs text-gray-400">
+              <div className="pt-3 border-t border-hairline">
+                <div className="flex justify-between text-xs text-ink-3">
                   <span>Sin ningún canal de contacto</span>
-                  <span className="font-semibold text-red-400">{(a.total - a.cntAnyContact).toLocaleString("es-AR")} ({100 - a.pctContact}%)</span>
+                  <span className="font-semibold text-danger">{(a.total - a.cntAnyContact).toLocaleString("es-AR")} ({100 - a.pctContact}%)</span>
                 </div>
               </div>
             </div>
@@ -1546,7 +1546,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           {a.contactByCircuito.length > 0 && (
             <HorizontalBarChart
               data={a.contactByCircuito}
-              color="#10b981"
+              color="#0f9b8e"
               title="● % Contactabilidad por circuito"
               subtitle="Qué % del circuito tiene al menos un canal de contacto"
               badge="● QUICK WIN"
@@ -1555,11 +1555,11 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
           {a.mesaContactabilidad.length > 0 && (
             <section>
-              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Ranking de mesas por contactabilidad</p>
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Ranking de mesas por contactabilidad</p>
+              <div className="bg-surface rounded-md border border-hairline overflow-hidden">
                 <div className="overflow-x-auto max-h-80">
                   <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-gray-50 text-gray-500 uppercase tracking-wider">
+                    <thead className="sticky top-0 bg-panel text-ink-2 uppercase tracking-wider">
                       <tr>
                         <th className="text-left px-4 py-2.5">#</th>
                         <th className="text-left px-4 py-2.5">Mesa</th>
@@ -1569,17 +1569,17 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                         <th className="px-4 py-2.5 w-20"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-hairline">
                       {a.mesaContactabilidad.map((m, i) => (
-                        <tr key={m.name} className={i < 3 ? "bg-green-50/40" : i >= a.mesaContactabilidad.length - 3 ? "bg-red-50/30" : ""}>
-                          <td className="px-4 py-2 text-gray-400">{i+1}</td>
-                          <td className="px-4 py-2 font-medium text-gray-700">{m.name}</td>
-                          <td className="px-4 py-2 text-right text-gray-500">{m.total.toLocaleString("es-AR")}</td>
-                          <td className="px-4 py-2 text-right text-green-600 font-medium">{m.cnt.toLocaleString("es-AR")}</td>
-                          <td className="px-4 py-2 text-right font-bold" style={{ color: m.value >= 50 ? "#10b981" : m.value >= 25 ? "#f59e0b" : "#ef4444" }}>{m.value}%</td>
+                        <tr key={m.name} className={i < 3 ? "bg-success-tint/40" : i >= a.mesaContactabilidad.length - 3 ? "bg-danger-tint/30" : ""}>
+                          <td className="px-4 py-2 text-ink-3">{i+1}</td>
+                          <td className="px-4 py-2 font-medium text-ink">{m.name}</td>
+                          <td className="px-4 py-2 text-right text-ink-2">{m.total.toLocaleString("es-AR")}</td>
+                          <td className="px-4 py-2 text-right text-success font-medium">{m.cnt.toLocaleString("es-AR")}</td>
+                          <td className="px-4 py-2 text-right font-bold" style={{ color: m.value >= 50 ? "#0f9b8e" : m.value >= 25 ? "#e0921a" : "#d6456a" }}>{m.value}%</td>
                           <td className="px-4 py-2">
-                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: `${m.value}%`, backgroundColor: m.value >= 50 ? "#10b981" : m.value >= 25 ? "#f59e0b" : "#ef4444" }} />
+                            <div className="h-1.5 bg-panel rounded-full overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${m.value}%`, backgroundColor: m.value >= 50 ? "#0f9b8e" : m.value >= 25 ? "#e0921a" : "#d6456a" }} />
                             </div>
                           </td>
                         </tr>
@@ -1626,12 +1626,12 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       {activeTab === "politica" && (
         <div className="space-y-6">
           <section>
-            <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Inteligencia política</p>
+            <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Inteligencia política</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <KPICard title="Núcleo duro" value={a.seg.nucleoDuro.toLocaleString("es-AR")} color="#1e3a5f" subtitle={`${pct(a.seg.nucleoDuro, a.total)}% del padrón`} />
-              <KPICard title="Contactable digital" value={a.seg.contactableDigital.toLocaleString("es-AR")} color="#10b981" subtitle={`${pct(a.seg.contactableDigital, a.total)}%`} />
-              <KPICard title="Contactable territorial" value={a.seg.contactableTerritorial.toLocaleString("es-AR")} color="#0ea5e9" subtitle={`${pct(a.seg.contactableTerritorial, a.total)}%`} />
-              <KPICard title="Persuadibles" value={a.seg.persuadible.toLocaleString("es-AR")} color="#f59e0b" subtitle={`${pct(a.seg.persuadible, a.total)}%`} />
+              <KPICard title="Núcleo duro" value={a.seg.nucleoDuro.toLocaleString("es-AR")} color="#5b50e6" subtitle={`${pct(a.seg.nucleoDuro, a.total)}% del padrón`} />
+              <KPICard title="Contactable digital" value={a.seg.contactableDigital.toLocaleString("es-AR")} color="#0f9b8e" subtitle={`${pct(a.seg.contactableDigital, a.total)}%`} />
+              <KPICard title="Contactable territorial" value={a.seg.contactableTerritorial.toLocaleString("es-AR")} color="#3c9bd6" subtitle={`${pct(a.seg.contactableTerritorial, a.total)}%`} />
+              <KPICard title="Persuadibles" value={a.seg.persuadible.toLocaleString("es-AR")} color="#e0921a" subtitle={`${pct(a.seg.persuadible, a.total)}%`} />
             </div>
           </section>
 
@@ -1643,7 +1643,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
             />
             {a.afilData.length > 0 && (
               <HorizontalBarChart
-                data={a.afilData} color="#1e3a5f"
+                data={a.afilData} color="#5b50e6"
                 title="★ Afiliación política"
                 badge="★ CORE" total={a.total}
                 caption={a.capAfil2}
@@ -1652,7 +1652,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           </div>
 
           {a.afilData.length === 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-sm text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-5 text-sm text-warn">
               <p className="font-medium mb-1">Columna de afiliación no detectada</p>
               <p className="text-xs">La segmentación usa domicilio y datos de contacto. Para activar "Núcleo duro" basado en afiliación, agregá una columna con nombre "afiliacion", "partido_pol" o similar al sheet.</p>
             </div>
@@ -1661,7 +1661,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           {/* Núcleo duro — desagregación por sexo y edad */}
           {(a.ndSexoData.length > 0 || a.ndAgeGroupData.length > 0) && (
             <section>
-              <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wider mb-3">● Núcleo duro — desagregación por sexo y edad</p>
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Núcleo duro — desagregación por sexo y edad</p>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {a.ndSexoData.length > 0 && (
                   <PieChartComponent
@@ -1671,25 +1671,25 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                   />
                 )}
                 {a.ndAgeGroupData.length > 0 && (
-                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-5">Grupos etarios por sexo — Núcleo duro</h3>
+                  <div className="bg-surface rounded-md p-6 border border-hairline">
+                    <h3 className="text-sm font-semibold text-ink mb-5">Grupos etarios por sexo — Núcleo duro</h3>
                     <ResponsiveContainer width="100%" height={280}>
                       <BarChart data={a.ndAgeGroupData} margin={{ top: 4, right: 16, left: 0, bottom: 16 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false}
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#5b6472" }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: "#5b6472" }} axisLine={false} tickLine={false}
                           tickFormatter={(v: number) => v.toLocaleString("es-AR")} />
                         <Tooltip
                           contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: 12 }}
                           formatter={(v: number) => [v.toLocaleString("es-AR"), ""]}
                         />
                         <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                        <Bar dataKey="M" name="Masculino" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={32} />
-                        <Bar dataKey="F" name="Femenino"  fill="#ec4899" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                        <Bar dataKey="M" name="Masculino" fill="#3c9bd6" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                        <Bar dataKey="F" name="Femenino"  fill="#c0497f" radius={[4, 4, 0, 0]} maxBarSize={32} />
                       </BarChart>
                     </ResponsiveContainer>
                     {a.capNdEdad && (
-                      <p className="mt-3 text-xs text-gray-500 border-t border-gray-100 pt-2">{a.capNdEdad}</p>
+                      <p className="mt-3 text-xs text-ink-2 border-t border-hairline pt-2">{a.capNdEdad}</p>
                     )}
                   </div>
                 )}
@@ -1699,9 +1699,9 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
           {a.participacionBySeg.length > 0 && (
             <section>
-              <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-3">★ Participación real por segmento (%)</p>
+              <p className="text-xs font-semibold text-success uppercase tracking-wider mb-3">★ Participación real por segmento (%)</p>
               <HorizontalBarChart
-                data={a.participacionBySeg} color="#10b981"
+                data={a.participacionBySeg} color="#0f9b8e"
                 title="% que votó por segmento electoral"
                 badge="★ CORE"
                 caption={a.capPartSeg}
@@ -1732,33 +1732,33 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       {activeTab === "calidad" && (
         <div className="space-y-6">
           <section>
-            <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Calidad de datos</p>
+            <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Calidad de datos</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <KPICard title="Índice calidad global" value={`${a.indices.calidadDatos}/100`} color={a.indices.calidadDatos >= 70 ? "#10b981" : a.indices.calidadDatos >= 40 ? "#f59e0b" : "#ef4444"} />
-              <KPICard title="Columnas" value={headers.length} color="#0ea5e9" />
-              <KPICard title="Georreferenciados" value={`${pct(a.geoRows, a.total)}%`} color="#8b5cf6" subtitle={`${a.geoRows.toLocaleString("es-AR")} registros`} />
-              <KPICard title="Total registros" value={a.total.toLocaleString("es-AR")} color="#1e3a5f" />
+              <KPICard title="Índice calidad global" value={`${a.indices.calidadDatos}/100`} color={a.indices.calidadDatos >= 70 ? "#0f9b8e" : a.indices.calidadDatos >= 40 ? "#e0921a" : "#d6456a"} />
+              <KPICard title="Columnas" value={headers.length} color="#3c9bd6" />
+              <KPICard title="Georreferenciados" value={`${pct(a.geoRows, a.total)}%`} color="#5b50e6" subtitle={`${a.geoRows.toLocaleString("es-AR")} registros`} />
+              <KPICard title="Total registros" value={a.total.toLocaleString("es-AR")} color="#5b50e6" />
             </div>
           </section>
 
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-700 mb-5">Completitud por columna</h3>
+          <div className="bg-surface rounded-md p-6 border border-hairline">
+            <h3 className="text-sm font-semibold text-ink mb-5">Completitud por columna</h3>
             <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-2">
               {a.completitud.map(c => (
                 <div key={c.name}>
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-600 font-medium truncate max-w-[60%]">{c.name}</span>
-                    <span className={`font-bold ${c.pct >= 80 ? "text-green-600" : c.pct >= 40 ? "text-amber-500" : "text-red-500"}`}>
+                    <span className="text-ink-2 font-medium truncate max-w-[60%]">{c.name}</span>
+                    <span className={`font-bold ${c.pct >= 80 ? "text-success" : c.pct >= 40 ? "text-warn" : "text-danger"}`}>
                       {c.pct}%
-                      <span className="text-gray-400 font-normal ml-1">({c.filled.toLocaleString("es-AR")} / {c.total.toLocaleString("es-AR")})</span>
+                      <span className="text-ink-3 font-normal ml-1">({c.filled.toLocaleString("es-AR")} / {c.total.toLocaleString("es-AR")})</span>
                     </span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-panel rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full"
                       style={{
                         width: `${c.pct}%`,
-                        backgroundColor: c.pct >= 80 ? "#10b981" : c.pct >= 40 ? "#f59e0b" : "#ef4444",
+                        backgroundColor: c.pct >= 80 ? "#0f9b8e" : c.pct >= 40 ? "#e0921a" : "#d6456a",
                       }}
                     />
                   </div>
@@ -1768,8 +1768,8 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Columnas críticas para campaña</h3>
+            <div className="bg-surface rounded-md p-6 border border-hairline">
+              <h3 className="text-sm font-semibold text-ink mb-4">Columnas críticas para campaña</h3>
               <div className="space-y-3">
                 {[
                   { label: "Nombre completo", idx: cols.nombre >= 0 ? cols.nombre : cols.apellido },
@@ -1784,15 +1784,15 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                   const p = i >= 0 ? pctFilled(rows, i) : -1
                   return (
                     <div key={label} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">{label}</span>
+                      <span className="text-ink-2">{label}</span>
                       {p < 0 ? (
-                        <span className="text-xs text-gray-300 italic">No detectada</span>
+                        <span className="text-xs text-ink-4 italic">No detectada</span>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full" style={{ width: `${p}%`, backgroundColor: p >= 80 ? "#10b981" : p >= 40 ? "#f59e0b" : "#ef4444" }} />
+                          <div className="w-20 h-2 bg-panel rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${p}%`, backgroundColor: p >= 80 ? "#0f9b8e" : p >= 40 ? "#e0921a" : "#d6456a" }} />
                           </div>
-                          <span className={`text-xs font-bold w-8 text-right ${p >= 80 ? "text-green-600" : p >= 40 ? "text-amber-500" : "text-red-500"}`}>{p}%</span>
+                          <span className={`text-xs font-bold w-8 text-right ${p >= 80 ? "text-success" : p >= 40 ? "text-warn" : "text-danger"}`}>{p}%</span>
                         </div>
                       )}
                     </div>
@@ -1801,23 +1801,23 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               </div>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
-              <h3 className="text-sm font-semibold text-amber-800 mb-3">Prioridades de limpieza</h3>
-              <div className="space-y-2 text-sm text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-6">
+              <h3 className="text-sm font-semibold text-warn mb-3">Prioridades de limpieza</h3>
+              <div className="space-y-2 text-sm text-warn">
                 {a.completitud.filter(c => c.pct < 40 && c.pct > 0).slice(0, 6).map(c => (
                   <div key={c.name} className="flex items-center justify-between">
                     <span>⚠ {c.name}</span>
-                    <span className="font-bold text-red-600">{c.pct}% completo</span>
+                    <span className="font-bold text-danger">{c.pct}% completo</span>
                   </div>
                 ))}
                 {a.completitud.filter(c => c.pct === 0).slice(0, 4).map(c => (
-                  <div key={c.name} className="flex items-center justify-between text-xs text-gray-400">
+                  <div key={c.name} className="flex items-center justify-between text-xs text-ink-3">
                     <span>✗ {c.name}</span>
                     <span>Vacía</span>
                   </div>
                 ))}
                 {a.completitud.filter(c => c.pct < 40).length === 0 && (
-                  <p className="text-green-700 font-medium">✓ Todas las columnas tienen más del 40% de datos</p>
+                  <p className="text-success font-medium">✓ Todas las columnas tienen más del 40% de datos</p>
                 )}
               </div>
             </div>
@@ -1825,27 +1825,27 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
           {/* ── Validation / inconsistencies ──── */}
           <section>
-            <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Validaciones y consistencia</p>
+            <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Validaciones y consistencia</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {cols.documento >= 0 && (
                 <KPICard title="Duplicados (DNI)" value={a.duplicates}
-                  color={a.duplicates === 0 ? "#10b981" : "#ef4444"}
+                  color={a.duplicates === 0 ? "#0f9b8e" : "#d6456a"}
                   alert={a.duplicates === 0 ? "ok" : "danger"}
                   subtitle={a.duplicates === 0 ? "Sin duplicados" : "registros extras"} />
               )}
               {cols.mesa >= 0 && (
                 <KPICard title="Sin mesa" value={a.missingMesa}
-                  color={a.missingMesa === 0 ? "#10b981" : "#f59e0b"}
+                  color={a.missingMesa === 0 ? "#0f9b8e" : "#e0921a"}
                   subtitle={a.missingMesa === 0 ? "Completo" : "registros sin mesa"} />
               )}
               {cols.circ >= 0 && (
                 <KPICard title="Sin circuito" value={a.missingCircuito}
-                  color={a.missingCircuito === 0 ? "#10b981" : "#f59e0b"}
+                  color={a.missingCircuito === 0 ? "#0f9b8e" : "#e0921a"}
                   subtitle={a.missingCircuito === 0 ? "Completo" : "sin circuito"} />
               )}
               {cols.documento >= 0 && (
                 <KPICard title="Sin DNI" value={a.missingDocumento}
-                  color={a.missingDocumento === 0 ? "#10b981" : "#f59e0b"}
+                  color={a.missingDocumento === 0 ? "#0f9b8e" : "#e0921a"}
                   subtitle={a.missingDocumento === 0 ? "Completo" : "sin documento"} />
               )}
             </div>
@@ -1854,19 +1854,19 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           {/* Enrichment levels */}
           {a.enrichLevels.some(v => v > 0) && (
             <section>
-              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Nivel de enriquecimiento por registro</p>
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Nivel de enriquecimiento por registro</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
-                  { label: "Sin datos extras", value: a.enrichLevels[0], color: "#ef4444" },
-                  { label: "1 campo extra", value: a.enrichLevels[1], color: "#f59e0b" },
-                  { label: "2 campos extras", value: a.enrichLevels[2], color: "#0ea5e9" },
-                  { label: "3+ campos extras", value: a.enrichLevels[3], color: "#10b981" },
+                  { label: "Sin datos extras", value: a.enrichLevels[0], color: "#d6456a" },
+                  { label: "1 campo extra", value: a.enrichLevels[1], color: "#e0921a" },
+                  { label: "2 campos extras", value: a.enrichLevels[2], color: "#3c9bd6" },
+                  { label: "3+ campos extras", value: a.enrichLevels[3], color: "#0f9b8e" },
                 ].map(s => (
-                  <div key={s.label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-                    <p className="text-xs text-gray-500 mb-1">{s.label}</p>
+                  <div key={s.label} className="bg-surface rounded-md p-4 border border-hairline ">
+                    <p className="text-xs text-ink-2 mb-1">{s.label}</p>
                     <p className="text-2xl font-black" style={{ color: s.color }}>{s.value.toLocaleString("es-AR")}</p>
-                    <p className="text-xs text-gray-400">{pct(s.value, a.total)}%</p>
-                    <div className="mt-2 h-1.5 bg-gray-100 rounded-full">
+                    <p className="text-xs text-ink-3">{pct(s.value, a.total)}%</p>
+                    <div className="mt-2 h-1.5 bg-panel rounded-full">
                       <div className="h-full rounded-full" style={{ width: `${pct(s.value, a.total)}%`, backgroundColor: s.color }} />
                     </div>
                   </div>
@@ -1878,19 +1878,19 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           {/* Columns with most missing */}
           {a.colMissingRanking.length > 0 && (
             <section>
-              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-3">● Columnas con mayor % de faltante</p>
-              <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-2.5">
+              <p className="text-xs font-semibold text-warn uppercase tracking-wider mb-3">● Columnas con mayor % de faltante</p>
+              <div className="bg-surface rounded-md p-5 border border-hairline space-y-2.5">
                 {a.colMissingRanking.map(c => (
                   <div key={c.name}>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-gray-600 font-medium truncate max-w-[60%]">{c.name}</span>
-                      <span className={`font-bold ${100-c.pct >= 80 ? "text-red-500" : 100-c.pct >= 50 ? "text-amber-500" : "text-gray-400"}`}>
+                      <span className="text-ink-2 font-medium truncate max-w-[60%]">{c.name}</span>
+                      <span className={`font-bold ${100-c.pct >= 80 ? "text-danger" : 100-c.pct >= 50 ? "text-warn" : "text-ink-3"}`}>
                         {100-c.pct}% faltante
-                        <span className="text-gray-400 font-normal ml-1">({(c.total-c.filled).toLocaleString("es-AR")} vacíos)</span>
+                        <span className="text-ink-3 font-normal ml-1">({(c.total-c.filled).toLocaleString("es-AR")} vacíos)</span>
                       </span>
                     </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full bg-red-400" style={{ width: `${100-c.pct}%` }} />
+                    <div className="h-1.5 bg-panel rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-danger" style={{ width: `${100-c.pct}%` }} />
                     </div>
                   </div>
                 ))}
@@ -1902,22 +1902,22 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {a.completitudPerCircuito.length > 0 && (
               <section>
-                <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Calidad por circuito (ICD)</p>
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Calidad por circuito (ICD)</p>
+                <div className="bg-surface rounded-md border border-hairline overflow-hidden">
                   <div className="overflow-y-auto max-h-64">
                     <table className="w-full text-xs">
-                      <thead className="sticky top-0 bg-gray-50 text-gray-500"><tr>
+                      <thead className="sticky top-0 bg-panel text-ink-2"><tr>
                         <th className="text-left px-4 py-2">Circuito</th>
                         <th className="text-right px-4 py-2">Electores</th>
                         <th className="text-right px-4 py-2">ICD</th>
                       </tr></thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-hairline">
                         {a.completitudPerCircuito.sort((a,b) => a.icd - b.icd).map(c => (
                           <tr key={c.name}>
-                            <td className="px-4 py-2 font-medium text-gray-700">{c.name}</td>
-                            <td className="px-4 py-2 text-right text-gray-500">{c.total.toLocaleString("es-AR")}</td>
+                            <td className="px-4 py-2 font-medium text-ink">{c.name}</td>
+                            <td className="px-4 py-2 text-right text-ink-2">{c.total.toLocaleString("es-AR")}</td>
                             <td className="px-4 py-2 text-right font-bold"
-                              style={{ color: c.icd >= 70 ? "#10b981" : c.icd >= 40 ? "#f59e0b" : "#ef4444" }}>{c.icd}</td>
+                              style={{ color: c.icd >= 70 ? "#0f9b8e" : c.icd >= 40 ? "#e0921a" : "#d6456a" }}>{c.icd}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1928,22 +1928,22 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
             )}
             {a.completitudPerMesa.length > 0 && (
               <section>
-                <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Mesas con menor completitud</p>
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Mesas con menor completitud</p>
+                <div className="bg-surface rounded-md border border-hairline overflow-hidden">
                   <div className="overflow-y-auto max-h-64">
                     <table className="w-full text-xs">
-                      <thead className="sticky top-0 bg-gray-50 text-gray-500"><tr>
+                      <thead className="sticky top-0 bg-panel text-ink-2"><tr>
                         <th className="text-left px-4 py-2">Mesa</th>
                         <th className="text-right px-4 py-2">Electores</th>
                         <th className="text-right px-4 py-2">ICD</th>
                       </tr></thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-hairline">
                         {a.completitudPerMesa.slice(0, 20).map(m => (
                           <tr key={m.name}>
-                            <td className="px-4 py-2 font-medium text-gray-700">{m.name}</td>
-                            <td className="px-4 py-2 text-right text-gray-500">{m.total.toLocaleString("es-AR")}</td>
+                            <td className="px-4 py-2 font-medium text-ink">{m.name}</td>
+                            <td className="px-4 py-2 text-right text-ink-2">{m.total.toLocaleString("es-AR")}</td>
                             <td className="px-4 py-2 text-right font-bold"
-                              style={{ color: m.icd >= 70 ? "#10b981" : m.icd >= 40 ? "#f59e0b" : "#ef4444" }}>{m.icd}</td>
+                              style={{ color: m.icd >= 70 ? "#0f9b8e" : m.icd >= 40 ? "#e0921a" : "#d6456a" }}>{m.icd}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1954,8 +1954,8 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
             )}
           </div>
 
-          <section className="bg-gray-50 rounded-2xl p-5 border border-gray-200">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Exportar datos</p>
+          <section className="bg-panel rounded-md p-5 border border-hairline">
+            <p className="text-xs font-semibold text-ink-2 uppercase tracking-wider mb-3">Exportar datos</p>
             <div className="flex flex-wrap gap-3">
               <ExportBtn label="Padrón completo CSV" icon="⬇" onClick={() => exportCSV(headers, rows, "padron_completo.csv")} color="sky" />
               <ExportBtn label="Registros vacíos CSV" icon="⬇"
@@ -1983,27 +1983,27 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
             <>
               {/* Sep/Oct 2025 KPIs — key metric */}
               <section>
-                <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Participación electoral 2025 (datos inline del padrón)</p>
+                <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Participación electoral 2025 (datos inline del padrón)</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {a.pctSep25 !== null && (
-                    <KPICard title="Participación Sep 2025" value={`${a.pctSep25}%`} color="#10b981"
+                    <KPICard title="Participación Sep 2025" value={`${a.pctSep25}%`} color="#0f9b8e"
                       subtitle="elecciones provinciales"
                       alert={a.pctSep25 >= 65 ? "ok" : a.pctSep25 >= 50 ? "warn" : "danger"} />
                   )}
                   {a.pctOct25 !== null && (
-                    <KPICard title="Participación Oct 2025" value={`${a.pctOct25}%`} color="#0ea5e9"
+                    <KPICard title="Participación Oct 2025" value={`${a.pctOct25}%`} color="#3c9bd6"
                       subtitle="elecciones nacionales"
                       alert={a.pctOct25 >= 65 ? "ok" : a.pctOct25 >= 50 ? "warn" : "danger"} />
                   )}
                   {a.caidaSepOct !== null && (
                     <KPICard
                       title="Caída Sep→Oct" value={`${a.caidaSepOct > 0 ? "-" : "+"}${Math.abs(a.caidaSepOct)} pp`}
-                      color={a.caidaSepOct > 5 ? "#ef4444" : a.caidaSepOct > 2 ? "#f59e0b" : "#10b981"}
+                      color={a.caidaSepOct > 5 ? "#d6456a" : a.caidaSepOct > 2 ? "#e0921a" : "#0f9b8e"}
                       subtitle="diferencial de participación"
                       alert={a.caidaSepOct > 5 ? "danger" : a.caidaSepOct > 2 ? "warn" : "ok"} />
                   )}
                   {a.votantesFieles > 0 && (
-                    <KPICard title="Votantes fieles" value={a.votantesFieles.toLocaleString("es-AR")} color="#1e3a5f"
+                    <KPICard title="Votantes fieles" value={a.votantesFieles.toLocaleString("es-AR")} color="#5b50e6"
                       subtitle={`${pct(a.votantesFieles, a.total)}% — votaron en todas`} />
                   )}
                 </div>
@@ -2011,7 +2011,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
               {/* Alert if Oct < Sep (anomaly) */}
               {a.caidaSepOct !== null && a.caidaSepOct > 5 && (
-                <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-700">
+                <div className="bg-danger-tint border border-hairline rounded-md p-4 text-sm text-danger">
                   <p className="font-semibold mb-1">Anomalía detectada: caída de participación Sep→Oct ({a.caidaSepOct} pp)</p>
                   <p className="text-xs">Maipú registra una caída inusual entre elecciones provinciales y nacionales 2025. La media de la 5ta sección fue +3,71 pp. Investigar mesas con mayor caída.</p>
                 </div>
@@ -2019,13 +2019,13 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
               {/* Multi-election bar chart */}
               <section>
-                <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Participación por elección (9 elecciones inline)</p>
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Participación por elección (9 elecciones inline)</p>
+                <div className="bg-surface rounded-md p-6 border border-hairline">
                   <BarChartComponent
                     data={a.elecChartData}
                     dataKey="value"
                     nameKey="name"
-                    color="#1e3a5f"
+                    color="#5b50e6"
                     title="% participación por elección"
                     total={100}
                     caption={(() => {
@@ -2041,15 +2041,15 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               {/* Abstención recuperable */}
               {a.abstencionOct25Recuperable > 0 && (
                 <section>
-                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-3">● Abstención recuperable Oct 2025</p>
+                  <p className="text-xs font-semibold text-warn uppercase tracking-wider mb-3">● Abstención recuperable Oct 2025</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <KPICard title="Abstención recuperable" value={a.abstencionOct25Recuperable.toLocaleString("es-AR")} color="#f59e0b"
+                    <KPICard title="Abstención recuperable" value={a.abstencionOct25Recuperable.toLocaleString("es-AR")} color="#e0921a"
                       subtitle="no votaron + tienen contacto"
                       alert={a.abstencionOct25Recuperable > 200 ? "warn" : "ok"} />
-                    <KPICard title="% del padrón" value={`${pct(a.abstencionOct25Recuperable, a.total)}%`} color="#8b5cf6"
+                    <KPICard title="% del padrón" value={`${pct(a.abstencionOct25Recuperable, a.total)}%`} color="#5b50e6"
                       subtitle="abstención con contacto" />
                     {a.cntCelular > 0 && (
-                      <KPICard title="Con celular" value={`${a.pctCelular}%`} color="#0ea5e9"
+                      <KPICard title="Con celular" value={`${a.pctCelular}%`} color="#3c9bd6"
                         subtitle={`${a.cntCelular.toLocaleString("es-AR")} contactables`} />
                     )}
                   </div>
@@ -2057,9 +2057,9 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               )}
             </>
           ) : (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-              <p className="text-sm font-semibold text-amber-800 mb-1">Columnas de participación electoral no detectadas</p>
-              <p className="text-xs text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-5">
+              <p className="text-sm font-semibold text-warn mb-1">Columnas de participación electoral no detectadas</p>
+              <p className="text-xs text-warn">
                 El padrón debe tener columnas con nombres exactos como &quot;2025 septiembre&quot;, &quot;2025 octubre&quot;, &quot;2023 PASO&quot;, etc. con valores VOTÓ / NO VOTÓ / SIN DATO.
                 Columnas detectadas: {headers.slice(0, 15).join(", ")}{headers.length > 15 ? "…" : ""}
               </p>
@@ -2071,22 +2071,22 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
             <>
               {/* KPIs principales */}
               <section>
-                <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Indicadores de participación real</p>
+                <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Indicadores de participación real</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {a.pctParticipacion !== null && (
                     <>
-                      <KPICard title="Participación real" value={`${a.pctParticipacion}%`} color="#10b981"
+                      <KPICard title="Participación real" value={`${a.pctParticipacion}%`} color="#0f9b8e"
                         subtitle={`${a.votoSI.toLocaleString("es-AR")} votaron`} />
-                      <KPICard title="Ausentismo" value={`${100 - a.pctParticipacion}%`} color="#ef4444"
+                      <KPICard title="Ausentismo" value={`${100 - a.pctParticipacion}%`} color="#d6456a"
                         subtitle={`${a.votoNO.toLocaleString("es-AR")} no votaron`} />
                     </>
                   )}
                   {a.fidelidadNucleo !== null && (
-                    <KPICard title="Fidelidad núcleo duro" value={`${a.fidelidadNucleo}%`} color="#1e3a5f"
+                    <KPICard title="Fidelidad núcleo duro" value={`${a.fidelidadNucleo}%`} color="#5b50e6"
                       subtitle="del núcleo duro que votó" />
                   )}
                   {a.abstencionRecuperable > 0 && (
-                    <KPICard title="Abstención recuperable" value={a.abstencionRecuperable.toLocaleString("es-AR")} color="#f59e0b"
+                    <KPICard title="Abstención recuperable" value={a.abstencionRecuperable.toLocaleString("es-AR")} color="#e0921a"
                       subtitle="no votaron + tienen contacto" />
                   )}
                 </div>
@@ -2095,10 +2095,10 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               {/* Participación por segmento — tabla detallada */}
               {a.cruceSeg.some(s => s.known > 0) && (
                 <section>
-                  <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Participación real por segmento electoral</p>
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Participación real por segmento electoral</p>
+                  <div className="bg-surface rounded-md border border-hairline overflow-hidden">
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                      <thead className="bg-panel text-ink-2 text-xs uppercase tracking-wider">
                         <tr>
                           <th className="text-left px-5 py-3">Segmento</th>
                           <th className="text-right px-4 py-3">Total padrón</th>
@@ -2108,18 +2108,18 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                           <th className="px-4 py-3 w-32"></th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-hairline">
                         {a.cruceSeg.map(s => (
-                          <tr key={s.label} className="hover:bg-gray-50 transition-colors">
+                          <tr key={s.label} className="hover:bg-panel transition-colors">
                             <td className="px-5 py-3 font-semibold" style={{ color: s.color }}>{s.label}</td>
-                            <td className="px-4 py-3 text-right text-gray-600">{s.total.toLocaleString("es-AR")}</td>
-                            <td className="px-4 py-3 text-right text-green-600 font-medium">{s.si.toLocaleString("es-AR")}</td>
-                            <td className="px-4 py-3 text-right text-red-500">{s.no.toLocaleString("es-AR")}</td>
+                            <td className="px-4 py-3 text-right text-ink-2">{s.total.toLocaleString("es-AR")}</td>
+                            <td className="px-4 py-3 text-right text-success font-medium">{s.si.toLocaleString("es-AR")}</td>
+                            <td className="px-4 py-3 text-right text-danger">{s.no.toLocaleString("es-AR")}</td>
                             <td className="px-4 py-3 text-right font-bold" style={{ color: s.color }}>
                               {s.known > 0 ? `${s.pct}%` : "—"}
                             </td>
                             <td className="px-4 py-3">
-                              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-2 bg-panel rounded-full overflow-hidden">
                                 <div className="h-full rounded-full" style={{ width: `${s.pct}%`, backgroundColor: s.color }} />
                               </div>
                             </td>
@@ -2135,25 +2135,25 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 {/* Participación por edad */}
                 {a.cruceEdad.length > 0 && (
                   <section>
-                    <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Participación por grupo etario (%)</p>
-                    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-3">
+                    <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Participación por grupo etario (%)</p>
+                    <div className="bg-surface rounded-md p-5 border border-hairline space-y-3">
                       {a.cruceEdad.map(g => (
                         <div key={g.name}>
                           <div className="flex justify-between text-sm mb-1">
-                            <span className="font-medium text-gray-700">{g.name}</span>
-                            <span className="font-bold text-sky-600">{g.pct}%
-                              <span className="text-xs text-gray-400 font-normal ml-2">
+                            <span className="font-medium text-ink">{g.name}</span>
+                            <span className="font-bold text-accent">{g.pct}%
+                              <span className="text-xs text-ink-3 font-normal ml-2">
                                 {g.si.toLocaleString("es-AR")} / {g.total.toLocaleString("es-AR")}
                               </span>
                             </span>
                           </div>
-                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full" style={{ width: `${g.pct}%`, backgroundColor: g.pct >= 70 ? "#10b981" : g.pct >= 50 ? "#0ea5e9" : "#f59e0b" }} />
+                          <div className="h-2 bg-panel rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${g.pct}%`, backgroundColor: g.pct >= 70 ? "#0f9b8e" : g.pct >= 50 ? "#3c9bd6" : "#e0921a" }} />
                           </div>
                         </div>
                       ))}
                       {a.capCruceEdad && (
-                        <p className="text-xs text-gray-500 border-t border-gray-100 pt-2">{a.capCruceEdad}</p>
+                        <p className="text-xs text-ink-2 border-t border-hairline pt-2">{a.capCruceEdad}</p>
                       )}
                     </div>
                   </section>
@@ -2162,25 +2162,25 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 {/* Participación por sexo */}
                 {a.cruceSexo.length > 0 && (
                   <section>
-                    <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Participación por sexo (%)</p>
-                    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-4">
+                    <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Participación por sexo (%)</p>
+                    <div className="bg-surface rounded-md p-5 border border-hairline space-y-4">
                       {a.cruceSexo.map(s => (
                         <div key={s.name}>
                           <div className="flex justify-between text-sm mb-1">
-                            <span className="font-medium text-gray-700">{s.name}</span>
-                            <span className="font-bold text-purple-600">{s.pct}%
-                              <span className="text-xs text-gray-400 font-normal ml-2">
+                            <span className="font-medium text-ink">{s.name}</span>
+                            <span className="font-bold text-accent">{s.pct}%
+                              <span className="text-xs text-ink-3 font-normal ml-2">
                                 {s.si.toLocaleString("es-AR")} / {s.total.toLocaleString("es-AR")}
                               </span>
                             </span>
                           </div>
-                          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full bg-purple-400" style={{ width: `${s.pct}%` }} />
+                          <div className="h-2.5 bg-panel rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-accent" style={{ width: `${s.pct}%` }} />
                           </div>
                         </div>
                       ))}
                       {a.capCruceSexo && (
-                        <p className="text-xs text-gray-500 border-t border-gray-100 pt-2">{a.capCruceSexo}</p>
+                        <p className="text-xs text-ink-2 border-t border-hairline pt-2">{a.capCruceSexo}</p>
                       )}
                     </div>
                   </section>
@@ -2190,11 +2190,11 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               {/* Ranking mesas por participación */}
               {a.mesaParticipacion.length > 0 && (
                 <section>
-                  <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Ranking de mesas por participación real</p>
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Ranking de mesas por participación real</p>
+                  <div className="bg-surface rounded-md border border-hairline overflow-hidden">
                     <div className="overflow-x-auto max-h-[420px]">
                       <table className="w-full text-xs">
-                        <thead className="sticky top-0 bg-gray-50 text-gray-500 uppercase tracking-wider">
+                        <thead className="sticky top-0 bg-panel text-ink-2 uppercase tracking-wider">
                           <tr>
                             <th className="text-left px-4 py-2.5">#</th>
                             <th className="text-left px-4 py-2.5">Mesa</th>
@@ -2205,18 +2205,18 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                             <th className="px-4 py-2.5 w-24"></th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-hairline">
                           {a.mesaParticipacion.map((m, i) => (
-                            <tr key={m.name} className={`hover:bg-gray-50 ${i < 3 ? "bg-green-50/40" : i >= a.mesaParticipacion.length - 3 ? "bg-red-50/40" : ""}`}>
-                              <td className="px-4 py-2 text-gray-400 font-mono">{i + 1}</td>
-                              <td className="px-4 py-2 font-semibold text-gray-700">{m.name}</td>
-                              <td className="px-4 py-2 text-right text-gray-500">{m.total.toLocaleString("es-AR")}</td>
-                              <td className="px-4 py-2 text-right text-green-600 font-medium">{m.si.toLocaleString("es-AR")}</td>
-                              <td className="px-4 py-2 text-right text-red-500">{m.no.toLocaleString("es-AR")}</td>
-                              <td className="px-4 py-2 text-right font-bold" style={{ color: m.pct >= 70 ? "#10b981" : m.pct >= 50 ? "#f59e0b" : "#ef4444" }}>{m.pct}%</td>
+                            <tr key={m.name} className={`hover:bg-panel ${i < 3 ? "bg-success-tint/40" : i >= a.mesaParticipacion.length - 3 ? "bg-danger-tint/40" : ""}`}>
+                              <td className="px-4 py-2 text-ink-3 font-mono">{i + 1}</td>
+                              <td className="px-4 py-2 font-semibold text-ink">{m.name}</td>
+                              <td className="px-4 py-2 text-right text-ink-2">{m.total.toLocaleString("es-AR")}</td>
+                              <td className="px-4 py-2 text-right text-success font-medium">{m.si.toLocaleString("es-AR")}</td>
+                              <td className="px-4 py-2 text-right text-danger">{m.no.toLocaleString("es-AR")}</td>
+                              <td className="px-4 py-2 text-right font-bold" style={{ color: m.pct >= 70 ? "#0f9b8e" : m.pct >= 50 ? "#e0921a" : "#d6456a" }}>{m.pct}%</td>
                               <td className="px-4 py-2">
-                                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                  <div className="h-full rounded-full" style={{ width: `${m.pct}%`, backgroundColor: m.pct >= 70 ? "#10b981" : m.pct >= 50 ? "#f59e0b" : "#ef4444" }} />
+                                <div className="h-1.5 bg-panel rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full" style={{ width: `${m.pct}%`, backgroundColor: m.pct >= 70 ? "#0f9b8e" : m.pct >= 50 ? "#e0921a" : "#d6456a" }} />
                                 </div>
                               </td>
                             </tr>
@@ -2229,8 +2229,8 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               )}
 
               {/* Exportes */}
-              <section className="bg-gray-50 rounded-2xl p-5 border border-gray-200">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Exportables del cruce</p>
+              <section className="bg-panel rounded-md p-5 border border-hairline">
+                <p className="text-xs font-semibold text-ink-2 uppercase tracking-wider mb-3">Exportables del cruce</p>
                 <div className="flex flex-wrap gap-3">
                   <ExportBtn label="Abstención recuperable CSV" icon="⬇"
                     onClick={() => {
@@ -2272,7 +2272,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
       {activeTab === "mapa" && (
         <div className="space-y-6">
           {(cols.lat < 0 || cols.lon < 0) ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-800">
+            <div className="bg-warn-tint border border-hairline rounded-md p-6 text-sm text-warn">
               <p className="font-semibold mb-1">Sin coordenadas geográficas</p>
               <p>El padrón no tiene columnas de latitud/longitud detectables. Para activar los mapas, el sheet debe tener columnas nombradas "lat", "latitud", "lon", "longitud" o similares con coordenadas decimales.</p>
             </div>
@@ -2281,8 +2281,8 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
               <section>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <div>
-                    <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">★ Mapas de electores georreferenciados</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{a.geoRows.toLocaleString("es-AR")} de {a.total.toLocaleString("es-AR")} electores tienen coordenadas ({pct(a.geoRows, a.total)}%)</p>
+                    <p className="text-xs font-semibold text-danger uppercase tracking-wider">★ Mapas de electores georreferenciados</p>
+                    <p className="text-xs text-ink-3 mt-0.5">{a.geoRows.toLocaleString("es-AR")} de {a.total.toLocaleString("es-AR")} electores tienen coordenadas ({pct(a.geoRows, a.total)}%)</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(["electores", "participacion", "abstención", "contactabilidad", "familias"] as const).map(m => (
@@ -2290,10 +2290,10 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                         key={m}
                         onClick={() => setMapMode(m)}
                         disabled={m === "participacion" && cols.voto < 0}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
                           mapMode === m
-                            ? "bg-[#1e3a5f] text-white shadow"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            ? "bg-[#5b50e6] text-accent-fg "
+                            : "bg-panel text-ink-2 hover:bg-panel"
                         }`}
                       >
                         {m === "electores" ? "Segmentos" :
@@ -2333,7 +2333,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                       title="Mapa de participación electoral"
                       subtitle="Verde = votó · Rojo = no votó · Gris = sin dato"
                       badge="★ CORE"
-                      colorMap={{ "Votó": "#10b981", "No votó": "#ef4444", "Sin dato": "#cbd5e1" }}
+                      colorMap={{ "Votó": "#0f9b8e", "No votó": "#d6456a", "Sin dato": "#8f897e" }}
                       mode="scatter"
                     />
                     {a.mapPointsAbstencion.length > 0 && (
@@ -2353,12 +2353,12 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                     {a.mapPointsAbstencion.length > 0 ? (
                       <>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-2">
-                          <KPICard title="Abstención recuperable" value={a.abstencionRecuperable.toLocaleString("es-AR")} color="#f59e0b"
+                          <KPICard title="Abstención recuperable" value={a.abstencionRecuperable.toLocaleString("es-AR")} color="#e0921a"
                             subtitle="no votaron + tienen contacto"
                             alert={a.abstencionRecuperable > 200 ? "warn" : "ok"} />
-                          <KPICard title="Con coordenadas" value={a.mapPointsAbstencion.length.toLocaleString("es-AR")} color="#0ea5e9"
+                          <KPICard title="Con coordenadas" value={a.mapPointsAbstencion.length.toLocaleString("es-AR")} color="#3c9bd6"
                             subtitle="mapeables" />
-                          <KPICard title="% del padrón" value={`${pct(a.abstencionRecuperable, a.total)}%`} color="#8b5cf6"
+                          <KPICard title="% del padrón" value={`${pct(a.abstencionRecuperable, a.total)}%`} color="#5b50e6"
                             subtitle="abstención recuperable" />
                         </div>
                         <LeafletMap
@@ -2366,7 +2366,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                           title="Distribución territorial — abstención recuperable"
                           subtitle="No votaron pero tienen celular, email o domicilio conocido"
                           badge="★ CORE"
-                          colorMap={{ "Abstención recuperable": "#f59e0b" }}
+                          colorMap={{ "Abstención recuperable": "#e0921a" }}
                           mode="scatter"
                         />
                         <LeafletMap
@@ -2378,7 +2378,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                         />
                       </>
                     ) : (
-                      <div className="bg-gray-50 rounded-2xl p-6 text-sm text-gray-500 text-center">
+                      <div className="bg-panel rounded-md p-6 text-sm text-ink-2 text-center">
                         {cols.voto < 0
                           ? "Cargá el sheet de votos y cruzá los datos para ver la abstención recuperable."
                           : "No hay registros de abstención recuperable con coordenadas."}
@@ -2394,7 +2394,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                       title="Mapa de contactabilidad territorial"
                       subtitle="Verde = digital (cel/email) · Azul = territorial (domicilio) · Rojo = sin contacto"
                       badge="★ CORE"
-                      colorMap={{ "Digital": "#10b981", "Territorial": "#0ea5e9", "Sin contacto": "#ef4444" }}
+                      colorMap={{ "Digital": "#0f9b8e", "Territorial": "#3c9bd6", "Sin contacto": "#d6456a" }}
                       mode="scatter"
                     />
                     <LeafletMap
@@ -2415,25 +2415,25 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                           <KPICard
                             title="Domicilios destacados"
                             value={a.mapPointsFamilias.length}
-                            color="#ef4444"
+                            color="#d6456a"
                             subtitle={`≥${a.familiaThreshold} electores por punto`}
                           />
                           <KPICard
                             title="Mayor concentración"
                             value={`${a.mapPointsFamilias[0]?.size ?? 0} electores`}
-                            color="#dc2626"
+                            color="#d6456a"
                             subtitle="en un solo domicilio"
                           />
                           <KPICard
                             title="Umbral estadístico"
                             value={`≥${a.familiaThreshold}`}
-                            color="#f59e0b"
+                            color="#e0921a"
                             subtitle="media + 1,5σ de la distribución"
                           />
                           <KPICard
                             title="Electores en grupos"
                             value={a.mapPointsFamilias.reduce((s, p) => s + p.size, 0).toLocaleString("es-AR")}
-                            color="#8b5cf6"
+                            color="#5b50e6"
                             subtitle={`${pct(a.mapPointsFamilias.reduce((s, p) => s + p.size, 0), a.total)}% del padrón`}
                           />
                         </div>
@@ -2442,18 +2442,18 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                           title="Grupos con mismo domicilio — acumulación inusual de electores"
                           subtitle={`Agrupado por texto exacto del campo DOMICILIO · ≥${a.familiaThreshold} electores en la misma dirección`}
                           badge="★ CORE"
-                          colorMap={{ "Muy alto": "#dc2626", "Alto": "#f59e0b" }}
+                          colorMap={{ "Muy alto": "#d6456a", "Alto": "#e0921a" }}
                           mode="bubble"
                           height={500}
                         />
-                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                          <div className="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
-                            <p className="text-sm font-semibold text-gray-800">Top domicilios por cantidad de electores registrados</p>
-                            <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">★ CORE</span>
+                        <div className="bg-surface rounded-md border border-hairline overflow-hidden">
+                          <div className="px-5 py-3 border-b border-hairline flex items-center justify-between">
+                            <p className="text-sm font-semibold text-ink">Top domicilios por cantidad de electores registrados</p>
+                            <span className="text-[10px] font-bold text-danger bg-danger-tint border border-hairline px-2 py-0.5 rounded-full">★ CORE</span>
                           </div>
                           <div className="overflow-x-auto max-h-72">
                             <table className="w-full text-xs">
-                              <thead className="sticky top-0 bg-gray-50 text-gray-500 uppercase tracking-wider">
+                              <thead className="sticky top-0 bg-panel text-ink-2 uppercase tracking-wider">
                                 <tr>
                                   <th className="text-left px-4 py-2.5">#</th>
                                   <th className="text-right px-4 py-2.5">Electores</th>
@@ -2462,19 +2462,19 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                                   <th className="text-right px-4 py-2.5">Nivel</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-gray-50">
+                              <tbody className="divide-y divide-hairline">
                                 {a.mapPointsFamilias.slice(0, 30).map((p, i) => (
-                                  <tr key={i} className={i < 3 ? "bg-red-50/40" : ""}>
-                                    <td className="px-4 py-2 text-gray-400 font-mono">{i + 1}</td>
-                                    <td className="px-4 py-2 text-right font-bold text-red-600">{p.size}</td>
-                                    <td className="px-4 py-2 font-medium text-gray-800 max-w-[180px] truncate" title={p.domicilio}>
+                                  <tr key={i} className={i < 3 ? "bg-danger-tint/40" : ""}>
+                                    <td className="px-4 py-2 text-ink-3 font-mono">{i + 1}</td>
+                                    <td className="px-4 py-2 text-right font-bold text-danger">{p.size}</td>
+                                    <td className="px-4 py-2 font-medium text-ink max-w-[180px] truncate" title={p.domicilio}>
                                       {p.domicilio}
                                     </td>
-                                    <td className="px-4 py-2 text-gray-500 max-w-[180px] truncate" title={p.apellidos.join(", ")}>
+                                    <td className="px-4 py-2 text-ink-2 max-w-[180px] truncate" title={p.apellidos.join(", ")}>
                                       {p.apellidos.join(", ")}
                                     </td>
                                     <td className="px-4 py-2 text-right">
-                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.colorKey === "Muy alto" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.colorKey === "Muy alto" ? "bg-danger-tint text-danger" : "bg-warn-tint text-warn"}`}>
                                         {p.colorKey}
                                       </span>
                                     </td>
@@ -2498,7 +2498,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                         </div>
                       </>
                     ) : (
-                      <div className="bg-gray-50 rounded-2xl p-8 text-center text-sm text-gray-400">
+                      <div className="bg-panel rounded-md p-8 text-center text-sm text-ink-3">
                         {cols.lat < 0 || cols.lon < 0
                           ? "El padrón no tiene coordenadas geográficas."
                           : "No se detectaron grupos familiares inusuales con los filtros actuales."}
@@ -2510,14 +2510,14 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
                 {((mapMode === "electores" && !a.mapPointsElectores.length) ||
                   (mapMode === "participacion" && !a.mapPointsParticipacion.length) ||
                   (mapMode === "contactabilidad" && !a.mapPointsContacto.length)) && (
-                  <div className="bg-gray-50 rounded-2xl p-8 text-center text-sm text-gray-400">
+                  <div className="bg-panel rounded-md p-8 text-center text-sm text-ink-3">
                     No hay electores con coordenadas geográficas en el filtro actual.
                   </div>
                 )}
               </section>
 
               {filterCircuito && (
-                <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-2 text-xs text-purple-700 font-medium">
+                <div className="bg-accent-tint border border-hairline rounded-md px-4 py-2 text-xs text-accent font-medium">
                   Mostrando solo circuito: <strong>{filterCircuito}</strong> — {a.total.toLocaleString("es-AR")} electores
                 </div>
               )}
@@ -2528,7 +2528,7 @@ export default function PadronEnriquecidoContent({ sheetId }: Props) {
 
       {/* Tabla completa (todos los tabs muestran acceso) */}
       <details className="group">
-        <summary className="cursor-pointer text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-600 transition-colors">
+        <summary className="cursor-pointer text-xs font-semibold text-ink-3 uppercase tracking-wider hover:text-ink-2 transition-colors">
           ▸ Ver datos completos ({a.total.toLocaleString("es-AR")} registros)
         </summary>
         <div className="mt-4">

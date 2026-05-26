@@ -125,13 +125,13 @@ export default function DiagnosticoContent({ sheetId }: Props) {
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Diagnóstico Territorial</h1>
-          <p className="text-gray-400 text-sm mt-0.5">
+          <h1 className="text-xl font-bold text-ink">Diagnóstico Territorial</h1>
+          <p className="text-ink-3 text-sm mt-0.5">
             Hoja: <span className="font-medium">{tabName}</span> · {total.toLocaleString("es-AR")} registros
           </p>
-          {lastUpdated && <p className="text-xs text-gray-400 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
+          {lastUpdated && <p className="text-xs text-ink-3 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
         </div>
-        <button onClick={load} className="flex items-center gap-1.5 text-xs text-sky-600 px-3 py-2 rounded-lg hover:bg-sky-50 border border-sky-200 transition-colors">
+        <button onClick={load} className="flex items-center gap-1.5 text-xs text-accent px-3 py-2 rounded-lg hover:bg-accent-tint border border-hairline transition-colors">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
@@ -142,7 +142,7 @@ export default function DiagnosticoContent({ sheetId }: Props) {
       {/* ★ Servicios básicos por barrio — el más fuerte para campaña */}
       {hasServiceData && (
         <section>
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Servicios básicos por barrio</p>
+          <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Servicios básicos por barrio</p>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {cloacaBarrio.length > 0 && cloacaKeys.length > 0 && (
               <StackedBarChart data={cloacaBarrio} keys={cloacaKeys}
@@ -167,7 +167,7 @@ export default function DiagnosticoContent({ sheetId }: Props) {
       {/* ★ Vivienda */}
       {(tenenciaData.length > 0 || tipoVivData.length > 0) && (
         <section>
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Bloque 3: Vivienda</p>
+          <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Bloque 3: Vivienda</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {tenenciaData.length > 0 && (
               <PieChartComponent data={tenenciaData} dataKey="value" nameKey="name"
@@ -196,19 +196,19 @@ export default function DiagnosticoContent({ sheetId }: Props) {
       {/* ● Discapacidad */}
       {conDiscap !== null && (
         <section>
-          <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Quick Win — Bloque 5: Discapacidad</p>
+          <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Quick Win — Bloque 5: Discapacidad</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
             <KPICard
               title="Hogares con discapacidad"
               value={conDiscap}
-              color="#8b5cf6"
+              color="#5b50e6"
               subtitle={`${Math.round(conDiscap / total * 100)}% del relevamiento`}
             />
             {conCUD !== null && (
               <>
-                <KPICard title="Con CUD" value={conCUD} color="#10b981"
+                <KPICard title="Con CUD" value={conCUD} color="#0f9b8e"
                   subtitle={`${Math.round(conCUD / conDiscap * 100)}% de los que tienen discap.`} />
-                <KPICard title="Sin CUD (gap)" value={conDiscap - conCUD} color="#ef4444"
+                <KPICard title="Sin CUD (gap)" value={conDiscap - conCUD} color="#d6456a"
                   subtitle="Oportunidad de acompañamiento" />
               </>
             )}
@@ -223,10 +223,10 @@ export default function DiagnosticoContent({ sheetId }: Props) {
       {/* ★ Políticas y programas municipales */}
       {politicasData.length > 0 && (
         <section>
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Políticas/programas del municipio</p>
+          <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Políticas/programas del municipio</p>
           <HorizontalBarChart
             data={politicasData}
-            color="#0ea5e9"
+            color="#3c9bd6"
             title="★ ¿Qué políticas/programas considera importantes?"
             subtitle="Respuestas múltiples — cada mención cuenta"
             badge="★ CORE"
@@ -238,13 +238,13 @@ export default function DiagnosticoContent({ sheetId }: Props) {
 
       {allImageUrls.length > 0 && (
         <section>
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Registro fotográfico</p>
+          <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Registro fotográfico</p>
           <ImageGallery urls={allImageUrls} title="Fotos del relevamiento" badge="★ CORE" />
         </section>
       )}
 
       <section>
-        <h2 className="text-base font-semibold text-gray-700 mb-3">Datos completos</h2>
+        <h2 className="text-base font-semibold text-ink mb-3">Datos completos</h2>
         <DataTable headers={headers} rows={rows} />
       </section>
     </div>

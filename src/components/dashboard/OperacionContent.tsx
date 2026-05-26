@@ -126,13 +126,13 @@ export default function OperacionContent({ sheetId }: Props) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Operación</h1>
-          <p className="text-gray-400 text-sm mt-0.5">
+          <h1 className="text-xl font-bold text-ink">Operación</h1>
+          <p className="text-ink-3 text-sm mt-0.5">
             KPIs de productividad · {totalRelevamientos.toLocaleString("es-AR")} registros totales
           </p>
-          {lastUpdated && <p className="text-xs text-gray-400 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
+          {lastUpdated && <p className="text-xs text-ink-3 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
         </div>
-        <button onClick={load} className="flex items-center gap-1.5 text-xs text-sky-600 px-3 py-2 rounded-lg hover:bg-sky-50 border border-sky-200 transition-colors">
+        <button onClick={load} className="flex items-center gap-1.5 text-xs text-accent px-3 py-2 rounded-lg hover:bg-accent-tint border border-hairline transition-colors">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
@@ -141,7 +141,7 @@ export default function OperacionContent({ sheetId }: Props) {
       </div>
 
       {Object.keys(tabCounts).length > 1 && (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-ink-2">
           <span className="font-medium">Analizando pestaña:</span>
           {Object.entries(tabCounts).map(([title, count]) => (
             <button key={title}
@@ -155,8 +155,8 @@ export default function OperacionContent({ sheetId }: Props) {
               }}
               className={`px-2.5 py-1 rounded-lg border transition-colors ${
                 title === mainTabName
-                  ? "bg-sky-600 text-white border-sky-600 font-semibold"
-                  : "border-gray-200 hover:border-sky-300 hover:text-sky-700"
+                  ? "bg-accent text-accent-fg border-hairline font-semibold"
+                  : "border-hairline hover:border-hairline hover:text-accent"
               }`}>
               {title} <span className="opacity-70">({(count as number).toLocaleString("es-AR")})</span>
             </button>
@@ -165,22 +165,22 @@ export default function OperacionContent({ sheetId }: Props) {
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <KPICard title="Total registros" value={totalRelevamientos} color="#1e3a5f" />
-        <KPICard title="Hoy" value={analytics.hoy} color="#10b981" />
-        <KPICard title="Últimos 7 días" value={analytics.totalLast7} color="#0ea5e9" />
+        <KPICard title="Total registros" value={totalRelevamientos} color="#5b50e6" />
+        <KPICard title="Hoy" value={analytics.hoy} color="#0f9b8e" />
+        <KPICard title="Últimos 7 días" value={analytics.totalLast7} color="#3c9bd6" />
         {analytics.uniqueDnis !== null
-          ? <KPICard title="DNIs únicos" value={analytics.uniqueDnis} color="#8b5cf6" />
-          : <KPICard title="Hojas" value={Object.keys(tabCounts).length} color="#f59e0b" />
+          ? <KPICard title="DNIs únicos" value={analytics.uniqueDnis} color="#5b50e6" />
+          : <KPICard title="Hojas" value={Object.keys(tabCounts).length} color="#e0921a" />
         }
       </div>
 
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-panel rounded-md p-1 w-fit">
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === t.id ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
+              activeTab === t.id ? "bg-surface  text-ink" : "text-ink-2 hover:text-ink"
             }`}
           >
             {t.label}
@@ -195,14 +195,14 @@ export default function OperacionContent({ sheetId }: Props) {
               data={analytics.cargasDia}
               dataKey="value"
               nameKey="name"
-              color="#0ea5e9"
+              color="#3c9bd6"
               title="Cargas por día"
               caption={analytics.topDay
                 ? `Pico: ${analytics.topDay.name} con ${analytics.topDay.value} registros. Promedio diario: ${analytics.avgDay}.`
                 : undefined}
             />
           ) : (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-6 text-sm text-warn">
               No se encontró columna de fecha para generar la serie temporal.
             </div>
           )}
@@ -225,7 +225,7 @@ export default function OperacionContent({ sheetId }: Props) {
               data={analytics.votoData}
               dataKey="value"
               nameKey="name"
-              color="#10b981"
+              color="#0f9b8e"
               title="Distribución por voto declarado"
               total={rows.length}
               caption={`Respuesta más frecuente: "${analytics.votoData[0]?.name}" con ${(analytics.votoData[0]?.value as number)?.toLocaleString("es-AR")} casos.`}
@@ -240,31 +240,31 @@ export default function OperacionContent({ sheetId }: Props) {
             <>
               <HorizontalBarChart
                 data={analytics.relevRank}
-                color="#1e3a5f"
+                color="#5b50e6"
                 title="Cargas por relevador"
                 subtitle="Volumen total de registros por operador"
                 badge="★ CORE"
                 total={totalRelevamientos}
                 caption={`${analytics.relevRank[0]?.name} lidera con ${(analytics.relevRank[0]?.value as number)?.toLocaleString("es-AR")} registros (${(((analytics.relevRank[0]?.value as number) / totalRelevamientos) * 100).toFixed(1)}% del total).`}
               />
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 overflow-x-auto">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">Tabla de relevadores</h3>
+              <div className="bg-surface rounded-md p-6 border border-hairline overflow-x-auto">
+                <h3 className="text-sm font-semibold text-ink mb-4">Tabla de relevadores</h3>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2 pr-4 text-gray-500 font-medium">#</th>
-                      <th className="text-left py-2 pr-4 text-gray-500 font-medium">Relevador</th>
-                      <th className="text-right py-2 text-gray-500 font-medium">Registros</th>
-                      <th className="text-right py-2 pl-4 text-gray-500 font-medium">% del total</th>
+                    <tr className="border-b border-hairline">
+                      <th className="text-left py-2 pr-4 text-ink-2 font-medium">#</th>
+                      <th className="text-left py-2 pr-4 text-ink-2 font-medium">Relevador</th>
+                      <th className="text-right py-2 text-ink-2 font-medium">Registros</th>
+                      <th className="text-right py-2 pl-4 text-ink-2 font-medium">% del total</th>
                     </tr>
                   </thead>
                   <tbody>
                     {analytics.relevRank.map((r, i) => (
-                      <tr key={String(r.name)} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-2 pr-4 text-gray-400">{i + 1}</td>
-                        <td className="py-2 pr-4 text-gray-700 font-medium">{String(r.name)}</td>
-                        <td className="py-2 text-right text-gray-900 font-semibold">{(r.value as number).toLocaleString("es-AR")}</td>
-                        <td className="py-2 pl-4 text-right text-gray-500">{(((r.value as number) / totalRelevamientos) * 100).toFixed(1)}%</td>
+                      <tr key={String(r.name)} className="border-b border-hairline hover:bg-panel">
+                        <td className="py-2 pr-4 text-ink-3">{i + 1}</td>
+                        <td className="py-2 pr-4 text-ink font-medium">{String(r.name)}</td>
+                        <td className="py-2 text-right text-ink font-semibold">{(r.value as number).toLocaleString("es-AR")}</td>
+                        <td className="py-2 pl-4 text-right text-ink-2">{(((r.value as number) / totalRelevamientos) * 100).toFixed(1)}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -272,7 +272,7 @@ export default function OperacionContent({ sheetId }: Props) {
               </div>
             </>
           ) : (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-6 text-sm text-warn">
               No se encontró columna de relevador en los datos.
             </div>
           )}
@@ -287,21 +287,21 @@ export default function OperacionContent({ sheetId }: Props) {
             (() => {
               const pct = Math.min(100, (totalRelevamientos / padronTotal) * 100)
               return (
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-4">Cobertura vs padrón</h3>
+                <div className="bg-surface rounded-md p-6 border border-hairline">
+                  <h3 className="text-sm font-semibold text-ink mb-4">Cobertura vs padrón</h3>
                   <div className="flex items-end gap-4 mb-3">
-                    <span className="text-4xl font-bold text-sky-600">{pct.toFixed(1)}%</span>
-                    <span className="text-sm text-gray-500 mb-1">
+                    <span className="text-4xl font-bold text-accent">{pct.toFixed(1)}%</span>
+                    <span className="text-sm text-ink-2 mb-1">
                       {totalRelevamientos.toLocaleString("es-AR")} de {padronTotal.toLocaleString("es-AR")} en padrón
                     </span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-3">
+                  <div className="w-full bg-panel rounded-full h-3">
                     <div
-                      className="h-3 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all"
+                      className="h-3 rounded-full bg-accent transition-all"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <p className="mt-3 text-xs text-gray-500">
+                  <p className="mt-3 text-xs text-ink-2">
                     {pct < 30
                       ? "Cobertura baja — se recomienda intensificar el relevamiento."
                       : pct < 60
@@ -312,7 +312,7 @@ export default function OperacionContent({ sheetId }: Props) {
               )
             })()
           ) : !padronSheetId ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-6 text-sm text-warn">
               Variable NEXT_PUBLIC_SHEET_PADRON_ID no configurada.
             </div>
           ) : null}
@@ -320,7 +320,7 @@ export default function OperacionContent({ sheetId }: Props) {
           {analytics.barrioData.length > 0 && (
             <HorizontalBarChart
               data={analytics.barrioData}
-              color="#0ea5e9"
+              color="#3c9bd6"
               title="Relevamientos por barrio"
               subtitle="Barrios con menos registros = prioridad de cobertura"
               badge="● QUICK WIN"
@@ -333,7 +333,7 @@ export default function OperacionContent({ sheetId }: Props) {
 
       {activeTab === "datos" && (
         <section>
-          <h2 className="text-base font-semibold text-gray-700 mb-3">Datos completos</h2>
+          <h2 className="text-base font-semibold text-ink mb-3">Datos completos</h2>
           <DataTable headers={headers} rows={rows} />
         </section>
       )}

@@ -85,10 +85,10 @@ const NAV = [
 function SidebarLinks({ onNav }: { onNav?: () => void }) {
   const pathname = usePathname()
   return (
-    <nav className="p-4 space-y-5 flex-1 overflow-y-auto">
+    <nav className="px-3 py-4 space-y-6 flex-1 overflow-y-auto">
       {NAV.map((group) => (
         <div key={group.section}>
-          <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-widest text-blue-400/70">
+          <p className="px-3 mb-1.5 text-[0.6875rem] font-medium uppercase tracking-wide text-ink-3">
             {group.section}
           </p>
           <div className="space-y-0.5">
@@ -99,12 +99,16 @@ function SidebarLinks({ onNav }: { onNav?: () => void }) {
                   key={item.href}
                   href={item.href}
                   onClick={onNav}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  aria-current={active ? "page" : undefined}
+                  className={`relative flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     active
-                      ? "bg-sky-500 text-white shadow-sm"
-                      : "text-blue-200 hover:bg-blue-800/60 hover:text-white"
+                      ? "bg-accent-tint-strong text-accent"
+                      : "text-ink-2 hover:bg-accent-tint hover:text-ink"
                   }`}
                 >
+                  {active && (
+                    <span aria-hidden className="absolute -left-3 top-1.5 bottom-1.5 w-0.5 rounded-full bg-accent" />
+                  )}
                   {item.icon}
                   {item.label}
                 </Link>
@@ -119,17 +123,17 @@ function SidebarLinks({ onNav }: { onNav?: () => void }) {
 
 function SidebarBrand() {
   return (
-    <div className="p-6 border-b border-blue-800/50">
+    <div className="px-5 py-5 border-b border-hairline">
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 bg-sky-500 rounded-xl flex items-center justify-center shadow">
-          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="w-9 h-9 bg-accent rounded-md flex items-center justify-center">
+          <svg className="w-5 h-5 text-accent-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
         </div>
         <div>
-          <span className="text-white font-bold text-lg leading-none">Severo</span>
-          <p className="text-blue-300 text-xs">Maipú 2025</p>
+          <span className="text-ink font-semibold text-lg leading-none">Severo</span>
+          <p className="text-ink-3 text-xs mt-0.5">Maipú 2025</p>
         </div>
       </div>
     </div>
@@ -142,7 +146,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop */}
-      <aside className="hidden md:flex w-60 bg-[#1e3a5f] flex-col flex-shrink-0 shadow-xl">
+      <aside className="hidden md:flex w-60 bg-panel border-r border-hairline flex-col flex-shrink-0">
         <SidebarBrand />
         <SidebarLinks />
       </aside>
@@ -150,7 +154,7 @@ export default function Sidebar() {
       {/* Mobile toggle */}
       <button
         aria-label="Abrir menú"
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#1e3a5f] text-white rounded-lg shadow-lg"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-surface text-ink border border-hairline rounded-md shadow-pop"
         onClick={() => setOpen(true)}
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -161,8 +165,8 @@ export default function Sidebar() {
       {/* Mobile drawer */}
       {open && (
         <div className="md:hidden fixed inset-0 z-40 flex">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <aside className="relative z-10 w-60 bg-[#1e3a5f] flex flex-col shadow-2xl">
+          <div className="absolute inset-0 bg-[oklch(0.255_0.008_75_/_0.45)]" onClick={() => setOpen(false)} />
+          <aside className="relative z-10 w-60 bg-panel border-r border-hairline flex flex-col shadow-pop">
             <SidebarBrand />
             <SidebarLinks onNav={() => setOpen(false)} />
           </aside>

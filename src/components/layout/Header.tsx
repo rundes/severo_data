@@ -7,27 +7,27 @@ export default function Header() {
   const { user, signOut } = useAuth()
 
   return (
-    <header className="bg-white border-b border-gray-100 px-6 py-3.5 flex items-center justify-between flex-shrink-0">
+    <header className="bg-surface border-b border-hairline px-6 py-3.5 flex items-center justify-between flex-shrink-0">
       <div className="md:ml-0 ml-10">
-        <p className="text-xs text-gray-400">Bienvenido/a</p>
-        <h1 className="text-gray-800 font-semibold text-sm leading-none mt-0.5">{user?.name}</h1>
+        <p className="text-[0.6875rem] uppercase tracking-wide text-ink-3">Bienvenido/a</p>
+        <h1 className="text-ink font-semibold text-sm leading-none mt-0.5">{user?.name}</h1>
       </div>
 
       <div className="flex items-center gap-3">
-        <span className="text-xs text-gray-400 hidden sm:block">{user?.email}</span>
+        <span className="text-xs text-ink-3 hidden sm:block">{user?.email}</span>
         {user?.picture && (
           <Image
             src={user.picture}
             alt={user.name}
             width={34}
             height={34}
-            className="rounded-full ring-2 ring-gray-100"
+            className="rounded-full ring-1 ring-hairline-strong"
             unoptimized
           />
         )}
         <button
           onClick={signOut}
-          className="text-xs text-gray-400 hover:text-red-500 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
+          className="text-xs text-ink-2 hover:text-danger transition-colors px-3 py-1.5 rounded-md hover:bg-danger-tint"
         >
           Salir
         </button>

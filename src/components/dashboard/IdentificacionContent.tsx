@@ -216,9 +216,9 @@ export default function IdentificacionContent({ sheetId }: Props) {
     padronRows.forEach(r => { const d = String(r[iDniPadron] ?? "").trim(); if (d) padronByDni.set(d, r) })
 
     const segCols: SegCols = {
-      iCelular: findCol(padronHeaders, COL.celular),
-      iEmail:   findCol(padronHeaders, COL.email),
-      iRedes:   findCol(padronHeaders, COL.redesSociales),
+      iCelular: findAllCols(padronHeaders, COL.celular),
+      iEmail:   findAllCols(padronHeaders, COL.email),
+      iRedes:   findAllCols(padronHeaders, COL.redesSociales),
       iAfil:    findCol(padronHeaders, COL.afiliacion),
       iDomicilio: findCol(padronHeaders, COL.domicilio),
       iBarrio:  findCol(padronHeaders, COL.barrio),
@@ -263,17 +263,17 @@ export default function IdentificacionContent({ sheetId }: Props) {
 
   if (!a) return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900">Identificación Electoral</h1>
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-        <p className="text-sm font-semibold text-amber-800 mb-1">
-          La pestaña <span className="font-mono bg-amber-100 px-1 rounded">{tabName}</span> no tiene datos reconocibles.
+      <h1 className="text-xl font-bold text-ink">Identificación Electoral</h1>
+      <div className="bg-warn-tint border border-hairline rounded-md p-5">
+        <p className="text-sm font-semibold text-warn mb-1">
+          La pestaña <span className="font-mono bg-warn-tint px-1 rounded">{tabName}</span> no tiene datos reconocibles.
         </p>
-        <p className="text-xs text-amber-700 mb-3">Seleccioná la pestaña correcta:</p>
+        <p className="text-xs text-warn mb-3">Seleccioná la pestaña correcta:</p>
         <div className="flex flex-wrap gap-2">
           {allSheetTabs.map(t => (
             <button key={t.title} onClick={() => loadTab(t.title)}
-              className="px-3 py-1.5 text-xs bg-white border border-amber-300 rounded-lg hover:bg-amber-50 text-amber-900 font-medium">
-              {t.title} <span className="text-amber-500">({t.count.toLocaleString("es-AR")} filas)</span>
+              className="px-3 py-1.5 text-xs bg-surface border border-hairline rounded-lg hover:bg-warn-tint text-warn font-medium">
+              {t.title} <span className="text-warn">({t.count.toLocaleString("es-AR")} filas)</span>
             </button>
           ))}
         </div>
@@ -282,7 +282,7 @@ export default function IdentificacionContent({ sheetId }: Props) {
   )
 
   const RefreshBtn = () => (
-    <button onClick={load} className="flex items-center gap-1.5 text-xs text-sky-600 px-3 py-2 rounded-lg hover:bg-sky-50 border border-sky-200 transition-colors">
+    <button onClick={load} className="flex items-center gap-1.5 text-xs text-accent px-3 py-2 rounded-lg hover:bg-accent-tint border border-hairline transition-colors">
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
       </svg>
@@ -294,25 +294,25 @@ export default function IdentificacionContent({ sheetId }: Props) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Identificación Electoral</h1>
-          <p className="text-gray-400 text-sm mt-0.5">
+          <h1 className="text-xl font-bold text-ink">Identificación Electoral</h1>
+          <p className="text-ink-3 text-sm mt-0.5">
             Hoja: <span className="font-medium">{tabName}</span> · {a.total.toLocaleString("es-AR")} registros
-            {selectedBarrio && <span className="text-sky-600"> · {rows.length.toLocaleString("es-AR")} totales</span>}
+            {selectedBarrio && <span className="text-accent"> · {rows.length.toLocaleString("es-AR")} totales</span>}
           </p>
-          {lastUpdated && <p className="text-xs text-gray-400 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
+          {lastUpdated && <p className="text-xs text-ink-3 mt-1">Actualizado {lastUpdated.toLocaleTimeString("es-AR")}</p>}
         </div>
         <RefreshBtn />
       </div>
 
       {allSheetTabs.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-ink-2">
           <span className="font-medium">Pestaña:</span>
           {allSheetTabs.map(t => (
             <button key={t.title} onClick={() => loadTab(t.title)}
               className={`px-2.5 py-1 rounded-lg border transition-colors ${
                 t.title === tabName
-                  ? "bg-sky-600 text-white border-sky-600 font-semibold"
-                  : "border-gray-200 hover:border-sky-300 hover:text-sky-700"
+                  ? "bg-accent text-accent-fg border-hairline font-semibold"
+                  : "border-hairline hover:border-hairline hover:text-accent"
               }`}>
               {t.title} <span className="opacity-70">({t.count.toLocaleString("es-AR")})</span>
             </button>
@@ -320,15 +320,15 @@ export default function IdentificacionContent({ sheetId }: Props) {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3">
+      <div className="bg-surface rounded-md border border-hairline px-4 py-3">
         <BarrioFilter value={selectedBarrio} onChange={setSelectedBarrio} />
       </div>
 
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl overflow-x-auto">
+      <div className="flex gap-1 bg-panel p-1 rounded-md overflow-x-auto">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
             className={`flex-1 min-w-max flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === t.id ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
+              activeTab === t.id ? "bg-surface  text-ink" : "text-ink-2 hover:text-ink"
             }`}>
             <span>{t.icon}</span> {t.label}
           </button>
@@ -339,19 +339,19 @@ export default function IdentificacionContent({ sheetId }: Props) {
       {activeTab === "resumen" && (
         <div className="space-y-6">
           {a.iP26 < 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-4 text-sm text-warn">
               No se encontró la columna P26 (¿nos votaría?) en esta hoja.
             </div>
           )}
           {a.p26Norm.length > 0 && (
             <>
               <section>
-                <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — P26 ¿Nos votaría?</p>
+                <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — P26 ¿Nos votaría?</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <KPICard title="Total SI" value={a.totalSI.toLocaleString("es-AR")} color="#10b981" subtitle={`${pct(a.totalSI, a.total)}% del total`} />
-                  <KPICard title="Total NO" value={a.totalNO.toLocaleString("es-AR")} color="#ef4444" subtitle={`${pct(a.totalNO, a.total)}% del total`} />
-                  <KPICard title="Dudosos" value={a.totalDudoso.toLocaleString("es-AR")} color="#f59e0b" subtitle={`${pct(a.totalDudoso, a.total)}%`} />
-                  <KPICard title="Relevados" value={a.total.toLocaleString("es-AR")} color="#1e3a5f" />
+                  <KPICard title="Total SI" value={a.totalSI.toLocaleString("es-AR")} color="#0f9b8e" subtitle={`${pct(a.totalSI, a.total)}% del total`} />
+                  <KPICard title="Total NO" value={a.totalNO.toLocaleString("es-AR")} color="#d6456a" subtitle={`${pct(a.totalNO, a.total)}% del total`} />
+                  <KPICard title="Dudosos" value={a.totalDudoso.toLocaleString("es-AR")} color="#e0921a" subtitle={`${pct(a.totalDudoso, a.total)}%`} />
+                  <KPICard title="Relevados" value={a.total.toLocaleString("es-AR")} color="#5b50e6" />
                 </div>
               </section>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -373,8 +373,8 @@ export default function IdentificacionContent({ sheetId }: Props) {
         <div className="space-y-6">
           {a.ageP26Data.some(d => d.value > 0) && (
             <section>
-              <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — % SI por rango etario</p>
-              <BarChartComponent data={a.ageP26Data} dataKey="value" nameKey="name" color="#10b981"
+              <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — % SI por rango etario</p>
+              <BarChartComponent data={a.ageP26Data} dataKey="value" nameKey="name" color="#0f9b8e"
                 title="% que respondió SI por grupo de edad"
                 caption={(() => {
                   const top = a.ageP26Data.reduce((x, y) => y.value > x.value ? y : x, { name: "", value: 0 })
@@ -384,22 +384,22 @@ export default function IdentificacionContent({ sheetId }: Props) {
           )}
           {a.p26BySexo.length > 0 && (
             <section>
-              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● P26 por sexo</p>
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5">
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● P26 por sexo</p>
+              <div className="bg-surface rounded-md p-6 border border-hairline space-y-5">
                 {a.p26BySexo.map(s => (
                   <div key={s.name}>
                     <div className="flex justify-between text-sm mb-1.5">
-                      <span className="font-medium text-gray-700">{s.name}</span>
-                      <span className="font-bold text-green-600">{pct(s.SI, s.total)}% SI
-                        <span className="text-xs text-gray-400 font-normal ml-2">{s.SI} de {s.total}</span>
+                      <span className="font-medium text-ink">{s.name}</span>
+                      <span className="font-bold text-success">{pct(s.SI, s.total)}% SI
+                        <span className="text-xs text-ink-3 font-normal ml-2">{s.SI} de {s.total}</span>
                       </span>
                     </div>
                     <div className="flex h-2 rounded-full overflow-hidden">
-                      <div className="bg-green-500" style={{ width: `${pct(s.SI, s.total)}%` }} />
-                      <div className="bg-red-400"   style={{ width: `${pct(s.NO, s.total)}%` }} />
-                      <div className="bg-amber-400" style={{ width: `${pct(s.DUDOSO, s.total)}%` }} />
+                      <div className="bg-success" style={{ width: `${pct(s.SI, s.total)}%` }} />
+                      <div className="bg-danger"   style={{ width: `${pct(s.NO, s.total)}%` }} />
+                      <div className="bg-warn" style={{ width: `${pct(s.DUDOSO, s.total)}%` }} />
                     </div>
-                    <div className="flex gap-4 mt-1 text-[10px] text-gray-400">
+                    <div className="flex gap-4 mt-1 text-[10px] text-ink-3">
                       <span>SI: {s.SI}</span><span>NO: {s.NO}</span><span>DUDOSO: {s.DUDOSO}</span>
                     </div>
                   </div>
@@ -409,17 +409,17 @@ export default function IdentificacionContent({ sheetId }: Props) {
           )}
           {a.cadencia.length > 0 && (
             <section>
-              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Cadencia de relevamiento</p>
-              <LineChartComponent data={a.cadencia} dataKey="value" nameKey="name" color="#10b981"
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Cadencia de relevamiento</p>
+              <LineChartComponent data={a.cadencia} dataKey="value" nameKey="name" color="#0f9b8e"
                 title="Nuevos registros por día" />
             </section>
           )}
           {a.relevStats.length > 0 && (
             <section>
-              <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● Eficiencia por relevador (% SI)</p>
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● Eficiencia por relevador (% SI)</p>
+              <div className="bg-surface rounded-md border border-hairline overflow-hidden">
                 <table className="w-full text-xs">
-                  <thead className="bg-gray-50 text-gray-500 uppercase tracking-wider">
+                  <thead className="bg-panel text-ink-2 uppercase tracking-wider">
                     <tr>
                       <th className="text-left px-4 py-3">#</th>
                       <th className="text-left px-4 py-3">Relevador</th>
@@ -428,15 +428,15 @@ export default function IdentificacionContent({ sheetId }: Props) {
                       <th className="text-right px-4 py-3">% SI</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-hairline">
                     {a.relevStats.slice(0, 20).map((r, i) => (
-                      <tr key={r.name} className="hover:bg-gray-50">
-                        <td className="px-4 py-2.5 text-gray-400">{i + 1}</td>
-                        <td className="px-4 py-2.5 font-medium text-gray-800">{r.name}</td>
-                        <td className="px-4 py-2.5 text-right text-gray-600">{r.total}</td>
-                        <td className="px-4 py-2.5 text-right text-green-600 font-medium">{r.si}</td>
+                      <tr key={r.name} className="hover:bg-panel">
+                        <td className="px-4 py-2.5 text-ink-3">{i + 1}</td>
+                        <td className="px-4 py-2.5 font-medium text-ink">{r.name}</td>
+                        <td className="px-4 py-2.5 text-right text-ink-2">{r.total}</td>
+                        <td className="px-4 py-2.5 text-right text-success font-medium">{r.si}</td>
                         <td className="px-4 py-2.5 text-right font-bold"
-                          style={{ color: r.pctSI >= 60 ? "#10b981" : r.pctSI >= 40 ? "#f59e0b" : "#ef4444" }}>
+                          style={{ color: r.pctSI >= 60 ? "#0f9b8e" : r.pctSI >= 40 ? "#e0921a" : "#d6456a" }}>
                           {r.pctSI}%
                         </td>
                       </tr>
@@ -454,13 +454,13 @@ export default function IdentificacionContent({ sheetId }: Props) {
         <div className="space-y-6">
           {padronLoading && <LoadingSpinner label="Cargando padrón enriquecido para cruce..." />}
           {!padronLoading && !padronLoaded && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-5 text-sm text-warn">
               <p className="font-medium mb-1">No se pudo acceder al padrón</p>
               <p className="text-xs">Verificá que NEXT_PUBLIC_SHEET_PADRON_ID esté configurado.</p>
             </div>
           )}
           {padronLoaded && !cruceAnalytics && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-5 text-sm text-warn">
               <p className="font-medium mb-1">No se puede cruzar con el padrón</p>
               <p className="text-xs">No se encontró columna DNI/Documento en alguna de las dos hojas.</p>
             </div>
@@ -468,35 +468,35 @@ export default function IdentificacionContent({ sheetId }: Props) {
           {cruceAnalytics && (
             <>
               <section>
-                <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Core — Cobertura del padrón</p>
+                <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Core — Cobertura del padrón</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <KPICard title="Total padrón" value={cruceAnalytics.totalPadron.toLocaleString("es-AR")} color="#1e3a5f" />
-                  <KPICard title="Identificados en padrón" value={cruceAnalytics.totalCubiertos.toLocaleString("es-AR")} color="#0ea5e9"
+                  <KPICard title="Total padrón" value={cruceAnalytics.totalPadron.toLocaleString("es-AR")} color="#5b50e6" />
+                  <KPICard title="Identificados en padrón" value={cruceAnalytics.totalCubiertos.toLocaleString("es-AR")} color="#3c9bd6"
                     subtitle={`${pct(cruceAnalytics.totalCubiertos, cruceAnalytics.totalPadron)}% del padrón`} />
-                  <KPICard title="SI del núcleo duro" value={cruceAnalytics.siNucleoDuro.toLocaleString("es-AR")} color="#10b981"
+                  <KPICard title="SI del núcleo duro" value={cruceAnalytics.siNucleoDuro.toLocaleString("es-AR")} color="#0f9b8e"
                     subtitle="afiliados + contacto" />
                   {cruceAnalytics.fidelidadOct !== null && (
-                    <KPICard title="Fidelidad Oct 2025" value={`${cruceAnalytics.fidelidadOct}%`} color="#8b5cf6"
+                    <KPICard title="Fidelidad Oct 2025" value={`${cruceAnalytics.fidelidadOct}%`} color="#5b50e6"
                       subtitle="de los SI que votaron" />
                   )}
                 </div>
-                <div className="mt-4 bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                  <p className="text-xs text-gray-500 mb-2">Cobertura del padrón</p>
-                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-sky-500 transition-all"
+                <div className="mt-4 bg-surface rounded-md p-5 border border-hairline ">
+                  <p className="text-xs text-ink-2 mb-2">Cobertura del padrón</p>
+                  <div className="h-3 bg-panel rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-accent transition-all"
                       style={{ width: `${Math.min(100, pct(cruceAnalytics.totalCubiertos, cruceAnalytics.totalPadron))}%` }} />
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-ink-3 mt-1">
                     {cruceAnalytics.totalCubiertos.toLocaleString("es-AR")} de {cruceAnalytics.totalPadron.toLocaleString("es-AR")} electores contactados
                   </p>
                 </div>
               </section>
               {cruceAnalytics.segList.length > 0 && (
                 <section>
-                  <p className="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-3">● P26 por segmento electoral (padrón cruzado)</p>
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-3">● P26 por segmento electoral (padrón cruzado)</p>
+                  <div className="bg-surface rounded-md border border-hairline overflow-hidden">
                     <table className="w-full text-xs">
-                      <thead className="bg-gray-50 text-gray-500 uppercase tracking-wider">
+                      <thead className="bg-panel text-ink-2 uppercase tracking-wider">
                         <tr>
                           <th className="text-left px-4 py-3">Segmento</th>
                           <th className="text-right px-4 py-3">Relevados</th>
@@ -507,21 +507,21 @@ export default function IdentificacionContent({ sheetId }: Props) {
                           <th className="px-4 py-3 w-28"></th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-hairline">
                         {cruceAnalytics.segList.map(s => (
-                          <tr key={s.name} className="hover:bg-gray-50">
-                            <td className="px-4 py-2.5 font-semibold text-gray-800">{s.name}</td>
-                            <td className="px-4 py-2.5 text-right text-gray-600">{s.total}</td>
-                            <td className="px-4 py-2.5 text-right text-green-600 font-medium">{s.SI}</td>
-                            <td className="px-4 py-2.5 text-right text-red-500">{s.NO}</td>
-                            <td className="px-4 py-2.5 text-right text-amber-500">{s.DUDOSO}</td>
+                          <tr key={s.name} className="hover:bg-panel">
+                            <td className="px-4 py-2.5 font-semibold text-ink">{s.name}</td>
+                            <td className="px-4 py-2.5 text-right text-ink-2">{s.total}</td>
+                            <td className="px-4 py-2.5 text-right text-success font-medium">{s.SI}</td>
+                            <td className="px-4 py-2.5 text-right text-danger">{s.NO}</td>
+                            <td className="px-4 py-2.5 text-right text-warn">{s.DUDOSO}</td>
                             <td className="px-4 py-2.5 text-right font-bold"
-                              style={{ color: pct(s.SI, s.total) >= 60 ? "#10b981" : pct(s.SI, s.total) >= 40 ? "#f59e0b" : "#ef4444" }}>
+                              style={{ color: pct(s.SI, s.total) >= 60 ? "#0f9b8e" : pct(s.SI, s.total) >= 40 ? "#e0921a" : "#d6456a" }}>
                               {pct(s.SI, s.total)}%
                             </td>
                             <td className="px-4 py-2.5">
-                              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full bg-green-500" style={{ width: `${pct(s.SI, s.total)}%` }} />
+                              <div className="h-1.5 bg-panel rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-success" style={{ width: `${pct(s.SI, s.total)}%` }} />
                               </div>
                             </td>
                           </tr>
@@ -529,7 +529,7 @@ export default function IdentificacionContent({ sheetId }: Props) {
                       </tbody>
                     </table>
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">Solo incluye electores del relevamiento que se encontraron en el padrón enriquecido (match por DNI).</p>
+                  <p className="text-xs text-ink-3 mt-2">Solo incluye electores del relevamiento que se encontraron en el padrón enriquecido (match por DNI).</p>
                 </section>
               )}
             </>
@@ -543,9 +543,9 @@ export default function IdentificacionContent({ sheetId }: Props) {
           {a.scatterData.length > 0 ? (
             <LeafletMap data={a.scatterData} title="★ Mapa de intención de voto (P26)"
               subtitle="Verde=SI · Rojo=NO · Amarillo=DUDOSO" badge="★ CORE"
-              colorMap={{ "SI": "#10b981", "NO": "#ef4444", "DUDOSO": "#f59e0b", "OTRO": "#94a3b8" }} />
+              colorMap={{ "SI": "#0f9b8e", "NO": "#d6456a", "DUDOSO": "#e0921a", "OTRO": "#5b6472" }} />
           ) : (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-700">
+            <div className="bg-warn-tint border border-hairline rounded-md p-6 text-sm text-warn">
               <p className="font-medium mb-1">Mapa no disponible</p>
               <p className="text-xs">No se encontraron columnas de coordenadas (lat/lon) en esta hoja.</p>
             </div>
@@ -562,7 +562,7 @@ export default function IdentificacionContent({ sheetId }: Props) {
         <div className="space-y-6">
           {a.allImageUrls.length > 0 && (
             <section>
-              <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3">★ Registro fotográfico</p>
+              <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">★ Registro fotográfico</p>
               <ImageGallery urls={a.allImageUrls} title="Fotos del relevamiento" badge="★ CORE" />
             </section>
           )}

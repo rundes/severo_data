@@ -3,8 +3,7 @@
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
 } from "recharts"
-
-const COLORS = ["#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"]
+import { chartColor, tooltipStyle, tooltipLabelStyle, fmtNumber, INK_3, SURFACE } from "@/lib/chartTheme"
 
 interface Props {
   data: Record<string, unknown>[]
@@ -28,7 +27,7 @@ function PctLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: Label
   const x = cx + r * Math.cos(-midAngle * RADIAN)
   const y = cy + r * Math.sin(-midAngle * RADIAN)
   return (
-    <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central"
+    <text x={x} y={y} fill={SURFACE} textAnchor="middle" dominantBaseline="central"
       fontSize={11} fontWeight="700">
       {(percent * 100).toFixed(1)}%
     </text>
@@ -37,8 +36,8 @@ function PctLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: Label
 
 export default function PieChartComponent({ data, dataKey, nameKey, title, showPercent = true, caption }: Props) {
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <h3 className="text-sm font-semibold text-gray-700 mb-5">{title}</h3>
+    <div className="bg-surface rounded-md p-5 border border-hairline">
+      <h3 className="text-sm font-semibold text-ink mb-5">{title}</h3>
       <ResponsiveContainer width="100%" height={280}>
         <PieChart>
           <Pie
@@ -54,25 +53,23 @@ export default function PieChartComponent({ data, dataKey, nameKey, title, showP
             label={showPercent ? PctLabel : undefined}
           >
             {data.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+              <Cell key={i} fill={chartColor(i)} stroke={SURFACE} strokeWidth={1.5} />
             ))}
           </Pie>
           <Tooltip
-            contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: 12 }}
-            formatter={(v, name) => [
-              typeof v === "number" ? v.toLocaleString("es-AR") : v,
-              name,
-            ]}
+            contentStyle={tooltipStyle}
+            labelStyle={tooltipLabelStyle}
+            formatter={(v, name) => [fmtNumber(v), name]}
           />
           <Legend
             formatter={(value) => (
-              <span style={{ fontSize: 11, color: "#64748b" }}>{value}</span>
+              <span style={{ fontSize: 11, color: INK_3 }}>{value}</span>
             )}
           />
         </PieChart>
       </ResponsiveContainer>
       {caption && (
-        <p className="mt-3 text-xs text-gray-500 border-t border-gray-100 pt-2">{caption}</p>
+        <p className="mt-3 text-xs text-ink-3 border-t border-hairline pt-2">{caption}</p>
       )}
     </div>
   )

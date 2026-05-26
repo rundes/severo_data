@@ -4,14 +4,14 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer,
 } from "recharts"
+import { CHART_COLORS, chartColor, axisTick, gridStroke, tooltipStyle, tooltipLabelStyle, INK_3 } from "@/lib/chartTheme"
 
-const PALETTE = ["#10b981", "#ef4444", "#f59e0b", "#0ea5e9", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"]
-
+// Vote intention keeps a fixed, colorblind-distinct mapping (hue + lightness vary).
 const VOTE_COLORS: Record<string, string> = {
-  SI: "#10b981",
-  NO: "#ef4444",
-  DUDOSO: "#f59e0b",
-  OTRO: "#94a3b8",
+  SI: CHART_COLORS[2],     // teal
+  NO: CHART_COLORS[3],     // rose
+  DUDOSO: CHART_COLORS[1], // amber
+  OTRO: CHART_COLORS[7],   // slate
 }
 
 interface Props {
@@ -26,27 +26,27 @@ interface Props {
 export default function StackedBarChart({ data, keys, title, subtitle, badge, percentage }: Props) {
   if (!data.length || !keys.length) return null
 
-  const colors = keys.map((k) => VOTE_COLORS[k.toUpperCase()] ?? PALETTE[keys.indexOf(k) % PALETTE.length])
+  const colors = keys.map((k, i) => VOTE_COLORS[k.toUpperCase()] ?? chartColor(i))
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+    <div className="bg-surface rounded-md p-5 border border-hairline">
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h3 className="text-sm font-semibold text-gray-700">{title}</h3>
-          {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+          <h3 className="text-sm font-semibold text-ink">{title}</h3>
+          {subtitle && <p className="text-xs text-ink-3 mt-0.5">{subtitle}</p>}
         </div>
         {badge && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex-shrink-0">
+          <span className="text-[0.6875rem] font-medium px-2 py-0.5 rounded border border-hairline bg-panel text-ink-2 tracking-wide flex-shrink-0">
             {badge}
           </span>
         )}
       </div>
       <ResponsiveContainer width="100%" height={280}>
         <BarChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 56 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
           <XAxis
             dataKey="name"
-            tick={{ fontSize: 11, fill: "#94a3b8" }}
+            tick={axisTick}
             angle={-35}
             textAnchor="end"
             interval={0}
@@ -54,16 +54,18 @@ export default function StackedBarChart({ data, keys, title, subtitle, badge, pe
             tickLine={false}
           />
           <YAxis
-            tick={{ fontSize: 11, fill: "#94a3b8" }}
+            tick={axisTick}
             axisLine={false}
             tickLine={false}
             tickFormatter={percentage ? (v) => `${v}%` : undefined}
           />
           <Tooltip
-            contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: 12 }}
+            contentStyle={tooltipStyle}
+            labelStyle={tooltipLabelStyle}
+            cursor={{ fill: "var(--accent-tint)" }}
           />
           <Legend
-            formatter={(v) => <span style={{ fontSize: 11, color: "#64748b" }}>{v}</span>}
+            formatter={(v) => <span style={{ fontSize: 11, color: INK_3 }}>{v}</span>}
           />
           {keys.map((key, i) => (
             <Bar key={key} dataKey={key} stackId="a" fill={colors[i]} maxBarSize={48} />
