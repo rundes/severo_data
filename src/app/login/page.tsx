@@ -60,7 +60,7 @@ export default function LoginPage() {
         </button>
 
         <p className="text-xs text-ink-3 mt-6 pt-5 border-t border-hairline">
-          Impulsado por cpelectoral.org
+          Impulsado por Centro de Estudios Políticos y Electorales - cpelectoral.org
         </p>
       </div>
     </div>
