@@ -32,14 +32,14 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-paper p-4">
-      <div className="bg-surface rounded-md border border-hairline shadow-pop p-10 w-full max-w-md">
+      <div className="bg-surface rounded-md border border-hairline shadow-pop p-10 w-full max-w-lg">
         {/* Brand */}
-        <div className="mb-8">
+        <div className="mb-8 flex justify-center">
           <Image
             src={`${BASE}/severo-logo-horizontal.svg`}
             alt="Proyecto Severo"
-            width={340}
-            height={85}
+            width={420}
+            height={105}
             priority
             unoptimized
           />
