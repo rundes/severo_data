@@ -38,8 +38,8 @@ export default function LoginPage() {
           <Image
             src={`${BASE}/severo-logo-horizontal.svg`}
             alt="Proyecto Severo"
-            width={260}
-            height={65}
+            width={340}
+            height={85}
             priority
             unoptimized
           />
