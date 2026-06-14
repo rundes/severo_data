@@ -1,8 +1,12 @@
 "use client"
 
 import { useEffect } from "react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
+
+// next/image no antepone basePath a assets estáticos en export; prefijar manual
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || ""
 
 const ERROR_MESSAGES: Record<string, string> = {
   AccessDenied: "No tenés permisos para acceder. Contactá al administrador.",
@@ -31,13 +35,14 @@ export default function LoginPage() {
       <div className="bg-surface rounded-md border border-hairline shadow-pop p-10 w-full max-w-md">
         {/* Brand */}
         <div className="mb-8">
-          <div className="w-11 h-11 bg-accent rounded-md mb-5 flex items-center justify-center">
-            <svg className="w-6 h-6 text-accent-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-ink">Severo Dashboard</h1>
+          <Image
+            src={`${BASE}/severo-logo-horizontal.svg`}
+            alt="Proyecto Severo"
+            width={260}
+            height={65}
+            priority
+            unoptimized
+          />
         </div>
 
         {errorMsg && (
