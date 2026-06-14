@@ -4,37 +4,57 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Design tokens (see DESIGN.md) ─────────────────────────────── */
+/* ── Design tokens — "Territorial Constellation" (see DESIGN.md, shared with severo_esfimero) ── */
 :root {
-  /* Warm-paper neutrals */
-  --paper: oklch(0.985 0.004 85);
-  --surface: oklch(0.997 0.003 85);
-  --panel: oklch(0.965 0.006 85);
-  --ink: oklch(0.255 0.008 75);
-  --ink-2: oklch(0.46 0.01 75);
-  --ink-3: oklch(0.62 0.012 75);
-  --ink-4: oklch(0.74 0.01 75);
-  --hairline: oklch(0.915 0.006 80);
-  --hairline-strong: oklch(0.86 0.008 80);
+  /* Cool neutrals tinted toward the brand navy */
+  --paper: #F4F6F9;        /* app field */
+  --surface: #FFFFFF;      /* cards, inputs, sheets */
+  --panel: #FAFBFD;        /* second layer: rail, toolbars, table headers */
+  --ink: #1A1A2E;          /* primary text */
+  --ink-2: #5C6677;        /* secondary text */
+  --ink-3: #8A93A3;        /* muted: labels, axes, captions */
+  --ink-4: #AEB6C2;        /* faint: placeholders, disabled */
+  --hairline: #DDE1E7;     /* borders, dividers */
+  --hairline-strong: #C7CEDA;
 
-  /* Committed indigo-violet accent */
-  --accent: oklch(0.53 0.205 287);
-  --accent-hover: oklch(0.47 0.215 287);
-  --accent-active: oklch(0.43 0.20 287);
-  --accent-fg: oklch(0.99 0.01 287);
-  --accent-tint: oklch(0.955 0.03 287);
-  --accent-tint-strong: oklch(0.91 0.055 287);
-  --accent-ring: oklch(0.62 0.18 287 / 0.4);
+  /* Constellation Blue — the single dominant hue */
+  --accent: #0D47A1;
+  --accent-hover: #083B87;
+  --accent-active: #06224F;
+  --accent-fg: #FFFFFF;          /* on-primary: text/icons on blue/dark */
+  --accent-tint: #E3F2FD;        /* Dawn Blue: hover/selected wash */
+  --accent-tint-strong: #CFE2FB; /* stronger wash: active row */
+  --accent-ring: rgba(13, 71, 161, 0.4);
+  --primary-mid: #1255A8;        /* header gradient highlight */
+  --primary-darker: #06224F;     /* deepest gradient stop */
 
-  /* Semantic (always paired with icon + label) */
-  --success: oklch(0.6 0.13 160);
-  --success-tint: oklch(0.95 0.04 160);
-  --warn: oklch(0.72 0.15 70);
-  --warn-tint: oklch(0.95 0.05 75);
-  --danger: oklch(0.56 0.2 25);
-  --danger-tint: oklch(0.95 0.04 25);
+  /* Severo Gold — brand mark only (Gold-Spark Rule) */
+  --gold: #FFC845;
 
-  --shadow-pop: 0 1px 2px oklch(0.4 0.02 75 / 0.04), 0 8px 24px oklch(0.4 0.02 75 / 0.08);
+  /* Relevamiento type hues (functional coding only) */
+  --type-ciudadano: #3B82F6;
+  --type-problematica: #F59E0B;
+  --type-sociohabitacional: #10B981;
+
+  /* Semantic (paired with icon + label) — text-safe shades, AA on light */
+  --success: #2E7D32;
+  --success-tint: #E8F5E9;
+  --success-border: #A5D6A7;
+  --warn: #B23E00;
+  --warn-tint: #FFF3E0;
+  --warn-border: #FFCC80;
+  --danger: #C62828;
+  --danger-tint: #FFEBEE;
+
+  /* Elevation — flat at rest; shadow signals lift/state, tinted brand navy */
+  --shadow-sm: 0 1px 2px rgba(6, 34, 79, 0.06), 0 1px 1px rgba(6, 34, 79, 0.04);
+  --shadow: 0 4px 16px rgba(6, 34, 79, 0.10);
+  --shadow-header: 0 1px 0 rgba(6, 34, 79, 0.10), 0 6px 18px rgba(6, 34, 79, 0.16);
+  --shadow-pop: 0 12px 32px rgba(6, 34, 79, 0.20);
+  --shadow-modal: 0 24px 64px rgba(6, 34, 79, 0.42);
+
+  --focus: 0 0 0 3px rgba(13, 71, 161, 0.34);
+  --ease: cubic-bezier(.22, 1, .36, 1);
 }
 
 @layer base {
@@ -45,6 +65,8 @@
   body {
     background: var(--paper);
     color: var(--ink);
+    /* Native system stack: instant, familiar, unbranded by design */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   /* Numbers align in columns everywhere they appear */
   th, td, input, table { font-variant-numeric: tabular-nums; }
@@ -54,7 +76,7 @@
     color: var(--ink);
   }
 
-  /* Accent focus ring for keyboard users */
+  /* Constellation-blue focus ring for keyboard users */
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -65,7 +87,7 @@
   .tnum { font-variant-numeric: tabular-nums; }
 }
 
-/* Quiet scrollbars that match the paper */
+/* Quiet scrollbars tinted to the field */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--hairline-strong) transparent;
@@ -78,16 +100,16 @@
 }
 *::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
 
-/* Leaflet barrio label tooltip, retinted to the system */
+/* Leaflet barrio label tooltip — navy ink, white text */
 .barrio-label {
   background: var(--ink);
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--accent-fg);
   font-size: 11px;
   font-weight: 600;
   padding: 2px 7px;
-  box-shadow: var(--shadow-pop);
+  box-shadow: var(--shadow);
   white-space: nowrap;
 }
 .barrio-label::before { display: none; }

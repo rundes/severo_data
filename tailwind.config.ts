@@ -30,14 +30,24 @@ const config: Config = {
           fg: "var(--accent-fg)",
           tint: "var(--accent-tint)",
           "tint-strong": "var(--accent-tint-strong)",
+          mid: "var(--primary-mid)",
+          darker: "var(--primary-darker)",
+        },
+        gold: "var(--gold)",
+        type: {
+          ciudadano: "var(--type-ciudadano)",
+          problematica: "var(--type-problematica)",
+          sociohabitacional: "var(--type-sociohabitacional)",
         },
         success: {
           DEFAULT: "var(--success)",
           tint: "var(--success-tint)",
+          border: "var(--success-border)",
         },
         warn: {
           DEFAULT: "var(--warn)",
           tint: "var(--warn-tint)",
+          border: "var(--warn-border)",
         },
         danger: {
           DEFAULT: "var(--danger)",
@@ -45,7 +55,11 @@ const config: Config = {
         },
       },
       boxShadow: {
+        sm: "var(--shadow-sm)",
+        DEFAULT: "var(--shadow)",
+        header: "var(--shadow-header)",
         pop: "var(--shadow-pop)",
+        modal: "var(--shadow-modal)",
       },
       ringColor: {
         accent: "var(--accent-ring)",
