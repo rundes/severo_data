@@ -32,7 +32,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-paper p-4">
-      <div className="bg-surface rounded-md border border-hairline shadow-pop p-10 w-full max-w-lg">
+      <div className="bg-surface rounded-md border border-hairline shadow-pop p-10 w-full max-w-lg text-center">
         {/* Brand */}
         <div className="mb-8 flex justify-center">
           <Image
