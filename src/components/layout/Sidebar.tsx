@@ -155,7 +155,7 @@ export default function Sidebar() {
       {/* Mobile toggle */}
       <button
         aria-label="Abrir menú"
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-surface text-ink border border-hairline rounded-md shadow-pop"
+        className="md:hidden fixed top-4 left-4 z-[1100] p-2 bg-surface text-ink border border-hairline rounded-md shadow-pop"
         onClick={() => setOpen(true)}
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -165,7 +165,7 @@ export default function Sidebar() {
 
       {/* Mobile drawer */}
       {open && (
-        <div className="md:hidden fixed inset-0 z-40 flex">
+        <div className="md:hidden fixed inset-0 z-[1100] flex">
           <div className="absolute inset-0 bg-[oklch(0.255_0.008_75_/_0.45)]" onClick={() => setOpen(false)} />
           <aside className="relative z-10 w-60 bg-panel border-r border-hairline flex flex-col shadow-pop">
             <SidebarBrand />
